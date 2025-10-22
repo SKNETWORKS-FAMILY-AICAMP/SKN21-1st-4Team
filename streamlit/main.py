@@ -17,15 +17,15 @@ st.set_page_config(
 # CSS 스타일링
 st.markdown("""
 <style>
-    .main-header {
-        text-align: center;
-        background: linear-gradient(90deg, #ff6b6b, #ee5a52);
-        color: white;
-        padding: 20px;
-        border-radius: 10px;
-        margin-bottom: 30px;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    }
+        .main-header {
+            text-align: center;
+            background: linear-gradient(90deg, #ff6b6b, #ee5a52);
+            color: white;
+            padding: 18px;
+            border-radius: 12px;
+            margin-bottom: 22px;
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+        }
     
     .section-header {
         background: linear-gradient(90deg, #4ecdc4, #44a08d);
@@ -55,6 +55,12 @@ st.markdown("""
         border-left: 5px solid #ff6b6b;
         margin: 10px 0;
     }
+
+    /* responsive tweaks */
+    @media (max-width: 600px) {
+        .main-header { padding: 14px; }
+        .golden-time-box { padding: 14px; }
+    }
     
     .alert-box {
         background: #fff3cd;
@@ -72,6 +78,39 @@ st.markdown("""
         padding: 15px;
         border-radius: 8px;
         margin: 15px 0;
+    }
+    
+    /* 사이드바 메뉴 스타일링 */
+    .sidebar .sidebar-content {
+        background-color: #f8f9fa;
+    }
+    
+    /* 사이드바 버튼 스타일 개선 */
+    .stButton > button {
+        width: 100%;
+        background-color: transparent;
+        color: #666666;
+        border: none;
+        border-radius: 0;
+        padding: 12px 16px;
+        margin: 5px 0;
+        font-size: 14px;
+        transition: all 0.2s ease;
+        text-align: left;
+    }
+    
+    .stButton > button:hover {
+        background-color: #f5f5f5;
+        color: #333333;
+    }
+    
+    /* 현재 선택된 메뉴 스타일 */
+    .current-menu {
+        font-weight: bold !important;
+        font-size: 16px !important;
+        color: #333333 !important;
+        padding: 12px 16px;
+        margin: 5px 0;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -133,12 +172,37 @@ def main():
     # 사이드바
     st.sidebar.title("📊 분석 메뉴")
     
-    page = st.sidebar.selectbox(
-        "분석 페이지를 선택하세요:",
-        ["🏥 황금시간의 중요성", "📰 현재 시스템 문제점", "📊 데이터 분석", "🔬 구급차 수요 분석", "📈 지역별 현황"]
-    )
+    # 세션 상태 초기화
+    if 'current_page' not in st.session_state:
+        st.session_state.current_page = "🏥 골든타임의 중요성"
     
-    if page == "🏥 황금시간의 중요성":
+    # 메뉴 옵션들
+    menu_options = [
+        "🏥 골든타임의 중요성", 
+        "📰 현재 시스템 문제점", 
+        "📊 데이터 분석", 
+        "🔬 구급차 수요 분석", 
+        "📈 지역별 현황"
+    ]
+    
+    # 각 메뉴를 개별 버튼으로 표시
+    for option in menu_options:
+        if option == st.session_state.current_page:
+            # 현재 선택된 메뉴는 볼드체로만 표시
+            st.sidebar.markdown(f"""
+                <div class="current-menu">
+                    {option}
+                </div>
+            """, unsafe_allow_html=True)
+        else:
+            # 다른 메뉴들은 클릭 가능한 버튼으로 표시
+            if st.sidebar.button(option, key=f"btn_{option}"):
+                st.session_state.current_page = option
+                st.rerun()
+    
+    page = st.session_state.current_page
+    
+    if page == "🏥 골든타임의 중요성":
         show_golden_time_page()
     elif page == "📰 현재 시스템 문제점":
         show_problems_page()
@@ -150,14 +214,14 @@ def main():
         show_regional_status_page()
 
 def show_golden_time_page():
-    st.markdown('<div class="section-header"><h2>🏥 황금시간(Golden Hour)의 중요성</h2></div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-header"><h2>🏥 골든타임(Golden Hour)의 중요성</h2></div>', unsafe_allow_html=True)
     
     col1, col2 = st.columns([2, 1])
     
     with col1:
         st.markdown("""
         <div class="golden-time-box">
-            <h3>⏰ 황금시간이란?</h3>
+            <h3>⏰ 골든타임이란?</h3>
             <p>중증 외상환자가 발생한 후 <strong>첫 1시간</strong> 내에 적절한 치료를 받아야 생존율이 크게 향상되는 시간</p>
         </div>
         """, unsafe_allow_html=True)
@@ -173,50 +237,25 @@ def show_golden_time_page():
         - **1시간 초과**: 생존율 30% 이하
         """)
         
-        # 생존율 그래프
-        time_data = pd.DataFrame({
-            '시간(분)': [5, 10, 20, 30, 45, 60, 90, 120],
-            '생존율(%)': [95, 90, 85, 75, 65, 55, 35, 20]
-        })
+        # # 생존율 그래프
+        # time_data = pd.DataFrame({
+        #     '시간(분)': [5, 10, 20, 30, 45, 60, 90, 120],
+        #     '생존율(%)': [95, 90, 85, 75, 65, 55, 35, 20]
+        # })
         
-        fig = px.line(time_data, x='시간(분)', y='생존율(%)', 
-                     title='시간 경과에 따른 생존율 변화',
-                     markers=True)
-        fig.update_traces(line_color='red', line_width=3)
-        fig.add_hline(y=60, line_dash="dash", line_color="orange", 
-                     annotation_text="황금시간 (60분)")
-        fig.update_layout(
-            plot_bgcolor='rgba(0,0,0,0)',
-            paper_bgcolor='rgba(0,0,0,0)',
-            font=dict(size=12)
-        )
-        st.plotly_chart(fig, use_container_width=True)
+        # fig = px.line(time_data, x='시간(분)', y='생존율(%)', 
+        #              title='시간 경과에 따른 생존율 변화',
+        #              markers=True)
+        # fig.update_traces(line_color='red', line_width=3)
+        # fig.add_hline(y=60, line_dash="dash", line_color="orange", 
+        #              annotation_text="골든타임 (60분)")
+        # fig.update_layout(
+        #     plot_bgcolor='rgba(0,0,0,0)',
+        #     paper_bgcolor='rgba(0,0,0,0)',
+        #     font=dict(size=12)
+        # )
+        # st.plotly_chart(fig, use_container_width=True)
     
-    with col2:
-        st.markdown("""
-        <div class="metric-card">
-            <h4>🎯 핵심 지표</h4>
-            <ul>
-                <li><strong>목표 도착시간</strong><br>8분 이내</li>
-                <li><strong>최대 허용시간</strong><br>15분 이내</li>
-                <li><strong>병원 이송시간</strong><br>30분 이내</li>
-            </ul>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        st.markdown("""
-        <div class="alert-box">
-            <h4>⚠️ 주요 응급상황</h4>
-            <ul>
-                <li>심장마비</li>
-                <li>뇌졸중</li>
-                <li>중증 외상</li>
-                <li>호흡곤란</li>
-                <li>대량출혈</li>
-            </ul>
-        </div>
-        """, unsafe_allow_html=True)
-
 def show_problems_page():
     st.markdown('<div class="section-header"><h2>📰 현재 119 응급시스템 문제점</h2></div>', unsafe_allow_html=True)
     
