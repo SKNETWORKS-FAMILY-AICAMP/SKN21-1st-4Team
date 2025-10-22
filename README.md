@@ -1,16 +1,21 @@
-Project README.md
-Readme.md는 발표 자료로 사용할 수 있도록 작성한다.
+# 🚑 119 응급의료시스템 분석 대시보드
 
-팀원 및 담당 업무
-프로젝트 주제 및 주제 설명 및 선정 이유
-주제
-주제를 선택한 이유
-주요 기능
-프로젝트를 구성하는 디렉토리들과 파일들의 구조.
-수집 데이터 설명
-데이터 베이스 테이블 설명
-Application의 주요 기능
-Application 제공하는 기능 설명
-회고
-구현 도중 생겼던 문제와 어떻게 해결했는지 작성.
-각자 프로젝트 진행하면서 느낀 점
+## 🚀 프로젝트 설치 및 실행
+
+### 1. 저장소 클론
+```bash
+git clone https://github.com/SKNETWORKS-FAMILY-AICAMP/SKN21-1st-4Team.git
+```
+
+### 2. 패키지 설치
+```bash
+pip install -r requirements.txt
+```
+
+### 3. Streamlit 앱 실행
+```bash
+cd streamlit
+streamlit run main.py
+```
+
+---

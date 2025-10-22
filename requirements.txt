@@ -1,0 +1,8 @@
+# 119 응급의료시스템 분석 대시보드
+# Core packages for Streamlit app
+
+streamlit==1.50.0
+pandas==2.3.3
+plotly==6.3.1
+numpy==2.3.4
+PyMySQL==1.1.2   # 추후 DB 연결용
