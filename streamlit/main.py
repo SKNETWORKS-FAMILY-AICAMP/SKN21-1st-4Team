@@ -16,7 +16,6 @@ except ImportError:
 try:
     from page_modules.overview import show_overview_page
     from page_modules.analysis import show_analysis_page
-    from page_modules.regional_status import show_regional_status_page
     from page_modules.faq import show_faq_page
 except ImportError as e:
     st.error(f"페이지 모듈을 찾을 수 없습니다: {e}")
@@ -133,7 +132,6 @@ def main():
     menu_options = [
         "🏥 응급의료시스템 개요", 
         "📊 데이터 및 수요 분석", 
-        "� 지역별 현황",
         "❓ 자주 묻는 질문"
     ]
     
@@ -159,17 +157,13 @@ def main():
             show_overview_page()
         elif page == "📊 데이터 및 수요 분석":
             show_analysis_page()
-        elif page == "� 지역별 현황":
-            show_regional_status_page()
         elif page == "❓ 자주 묻는 질문":
             show_faq_page()
     except Exception as e:
-        st.error(f"페이지 로딩 중 오류가 발생했습니다: {e}")
+        st.error(f"페이지를 로드하는 중 오류가 발생했습니다: {e}")
         st.write("사용 가능한 페이지:")
         st.write("- 🏥 응급의료시스템 개요")
         st.write("- 📊 데이터 및 수요 분석")
-        st.write("- � 지역별 현황")
         st.write("- ❓ 자주 묻는 질문")
-
 if __name__ == "__main__":
     main()
