@@ -51,7 +51,8 @@ def show_analysis_page():
                     y=sorted_df['구급차수'],
                     name='구급차수',
                     marker_color='#1f77b4',
-                    opacity=0.8
+                    opacity=0.8,
+                    offsetgroup=1
                 ),
                 secondary_y=False,
             )
@@ -64,7 +65,8 @@ def show_analysis_page():
                     name='이송환자수',
                     marker_color='#ff7f0e',
                     opacity=0.7,
-                    yaxis='y2'
+                    yaxis='y2',
+                    offsetgroup=2
                 ),
                 secondary_y=True,
             )
