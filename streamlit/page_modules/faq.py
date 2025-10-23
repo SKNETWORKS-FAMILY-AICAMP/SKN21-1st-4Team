@@ -1,160 +1,395 @@
+# faq.py
 import streamlit as st
-import mysql.connector
-from mysql.connector import Error
-import pandas as pd
+import pymysql
+import requests
+from bs4 import BeautifulSoup, NavigableString, Tag
+import html, re, time
 
+# ===== DB 설정 =====
+DB_CONFIG = {
+    "host": "192.168.0.23",
+    "port": 3306,
+    "user": "first_guest",
+    "password": "1234",
+    "db": "emergency",
+    "charset": "utf8mb4",
+    "autocommit": False,
+}
 
-def get_mysql_connection():
-    """MySQL 데이터베이스 연결"""
-    try:
-        connection = mysql.connector.connect(
-            host=st.secrets.get("mysql", {}).get("host", "localhost"),
-            database=st.secrets.get("mysql", {}).get("database", "emergency_db"),
-            user=st.secrets.get("mysql", {}).get("user", "first_guest"),
-            password=st.secrets.get("mysql", {}).get("password", "1234")
-        )
-        return connection
-    except Error as e:
-        st.error(f"MySQL 연결 오류: {e}")
-        return None
-
-
-@st.cache_data(ttl=3600)  # 1시간 캐시
-def load_faq_data():
-    """MySQL에서 FAQ 데이터 로드"""
-    try:
-        connection = get_mysql_connection()
-        if connection is None:
-            return get_fallback_faq_data()
-        
-        query = "SELECT faq_question, faq_answer FROM emergency_faq ORDER BY id"
-        df = pd.read_sql(query, connection)
-        connection.close()
-        
-        # DataFrame을 딕셔너리 리스트로 변환
-        faqs = []
-        for _, row in df.iterrows():
-            faqs.append({
-                "question": row['faq_question'],
-                "answer": row['faq_answer']
-            })
-        
-        return faqs
-        
-    except Exception as e:
-        st.warning(f"FAQ 데이터 로드 중 오류가 발생했습니다: {e}")
-        return get_fallback_faq_data()
-
-
-def get_fallback_faq_data():
-    """MySQL 연결 실패 시 기본 FAQ 데이터"""
-    return [
-        {
-            "question": "💰 119 구급차는 유료인가요?",
-            "answer": """
-**소방서 119 구급차 이송은 위급 상황에서 전국 어디서나 무료**입니다.  
-다만 **비응급 환자 이송·의료기관 간 이송** 등은 **민간(의료기관 등) 구급차** 이용 대상이며 아래와 같은 **요금 기준**이 적용됩니다.
-
-**민간 구급차(응급의료법 제44조) 요금(요약)**  
-- **일반구급차 기본요금(10km 이내)**: 30,000원(의료기관 등) / 20,000원(비영리법인)  
-- **일반구급차 추가요금(10km 초과)**: 1,000원/km / 800원/km  
-- **특수구급차 기본요금(10km 이내)**: 75,000원 / 50,000원  
-- **특수구급차 추가요금(10km 초과)**: 1,300원/km / 1,000원/km  
-- **할증(00:00~04:00)**: 기본·추가요금 각각 20% 가산  
-- **별도 청구 금지**: 이송처치료 외 **장비·소모품·대기비·통행료·보호자 탑승료 등 별도 청구 금지**
-
-_(출처: 찾기쉬운 생활법령정보 '구급차의 이용 방법', 최신기준 2025-09-15)_"""
-        },
-        {
-            "question": "📞 119 구급신고는 어떻게 하나요?",
-            "answer": """
-**신고 핵심 절차(요약)**  
-1) "환자가 있습니다" 등 **응급상황임을 먼저 알리기**  
-2) **정확한 위치(주소·랜드마크)** 전달  
-3) **무슨 일이 발생했는지/증상** 설명  
-4) **환자 상태**(의식·호흡·연령·성별 등)  
-5) **신고자 연락처**  
-6) **상담원(구급상황관리사)의 안내**를 따라 **전화를 먼저 끊지 않기**
-
-_(출처: 소방청 '119 구급신고 요령')_"""
-        },
-        {
-            "question": "🏠 구급차 도착 전 무엇을 준비하나요?",
-            "answer": """
-**도착 전 준비 체크리스트**  
-- **의료지도·응급처치**: 상담원 안내에 따라 침착하게 시행(필요 시 CPR)  
-- **길 안내**: 동행자가 있다면 **도로까지 나가 안내**  
-- **준비물**: 신분증/건강보험증/진찰권, 현금·카드·신발 등 생필품, **평소 복용약 목록**  
-- **안전조치**: **문단속**, 전기·가스 **차단**  
-- **영유아**: 우유·기저귀·모자보건수첩 등
-
-_(출처: 소방청 '119 구급차 도착전 준비')_"""
-        },
-        {
-            "question": "🩺 현장에서 임의로 옮겨도 되나요? 응급처치는 어떻게?",
-            "answer": """
-**원칙**: **상담원 의료지도에 따름**. 척추손상 등 위험이 의심되면 **임의 이동 최소화**.  
-**응급처치**: 기도확보·호흡확인 등 **기본응급처치**를 수행하고, 필요 시 **심폐소생술(CPR)** 시행.  
-**교육**: CPR 등 응급처치 교육은 **관내 소방서·보건소** 및 공인 교육기관에서 상시 운영.
-
-_(출처: 소방청 '119 구급차 도착전 준비')_"""
-        },
-        {
-            "question": "🚦 긴급자동차의 신호위반 등 '특례'가 있나요?",
-            "answer": """
-네. **골든타임 확보**를 위해 '도로교통법' 개정(시행: **2021-01-12**)으로 **긴급자동차 통행 특례가 확대**되었습니다.  
-**대상**: 소방·구급·경찰·혈액 운반용 등 긴급자동차(생명 위급 환자 이송 차량 포함)  
-**취지**: 신속 출동·이송 중 **업무 수행 보호** 및 **출동 시간 단축**
-
-_(출처: 대한민국 정책브리핑 '긴급자동차 출동 시간 더 빨라진다!')_"""
-        },
-        {
-            "question": "🚨 일반차량이 구급차 진로양보해야 하나요?",
-            "answer": """
-**의무입니다.**  
-- **교차로·부근**: 긴급자동차가 접근하면 **교차로를 피하여 일시정지**해야 합니다.  
-- **그 외 구간**: 긴급자동차가 **우선 통행**할 수 있도록 **도로 우측 가장자리로 피해서 진로를 양보**합니다. *(일방통행 등 구조상 좌측 양보가 안전한 경우는 좌측 가능)*
-
-**법적 근거(요지):**  
-- 「도로교통법」 **제29조(긴급자동차의 우선 통행)**  
-  - 제4항: *교차로나 그 부근에서 긴급자동차가 접근하는 경우 차마와 노면전차의 운전자는 **교차로를 피하여 일시정지***  
-- 찾기쉬운 생활법령정보(법제처) **'자동차 운전 시 긴급자동차가 접근하면 진로양보는?'**  
-  - 교차로·그 부근: **일시정지** / 그 외 구간: **우측 가장자리로 피양(양보)**  
-  - 좁은 도로 등 **예외 상황별 양보 방법** 안내
-
-**출처:**  
-- 도로교통법 제29조(긴급자동차의 우선 통행): law.go.kr  
-- 찾기쉬운 생활법령정보(진로 양보 안내): easylaw.go.kr
+# ===== 테이블 생성 / UPSERT =====
+CREATE_TABLE_SQL = """
+CREATE TABLE IF NOT EXISTS emergency_faq (
+    idx INT NOT NULL AUTO_INCREMENT,
+    faq_question VARCHAR(255) NOT NULL,
+    faq_answer   TEXT NOT NULL,
+    PRIMARY KEY (idx),
+    UNIQUE KEY uq_faq_question (faq_question)
+) CHARACTER SET utf8mb4;
 """
-        },
+UPSERT_SQL = """
+INSERT INTO emergency_faq (faq_question, faq_answer)
+VALUES (%s, %s)
+ON DUPLICATE KEY UPDATE faq_answer = VALUES(faq_answer);
+"""
+
+# ===== 질문 & 링크 =====
+QUESTION_SOURCES = [
+    {
+        "q": "119 구급차 이용금액은 얼마인가요?",
+        "url": "https://www.easylaw.go.kr/CSP/OnhunqueansInfoRetrieve.laf?onhunqnaAstSeq=86&onhunqueSeq=4729",
+    },
+    {
+        "q": "응급처치시 알아두어야야 할 법적인 문제",
+        "url": "https://www.safekorea.go.kr/idsiSFK/neo/sfk/cs/contents/prevent/SDIJK14433.html?cd1=33&cd2=999&menuSeq=128&pagecd=SDIJK144.33",
+    },
+    {
+        "q": "119 구급신고 요령",
+        "url": "https://www.nfa.go.kr/nfa/safetyinfo/emergencyservice/119emergencydeclaration/",
+    },
+    {
+        "q": "119 구급차 도착 전 준비",
+        "url": "https://www.nfa.go.kr/nfa/safetyinfo/emergencyservice/emergencydeclarationbefore/",
+    },
+    {
+        "q": "긴급자동차(구급차) 특례",
+        "url": "https://www.korea.kr/briefing/policyBriefingView.do?newsId=148883361&utm_source=chatgpt.com",
+    },
+]
+ORDER_MAP = {item["q"]: i for i, item in enumerate(QUESTION_SOURCES)}
+
+UA = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
+
+# ===== 공통 유틸 =====
+def clean(text: str) -> str:
+    text = html.unescape(text or "")
+    text = re.sub(r"\s+", " ", text)
+    return text.strip()
+
+def safe_rerun():
+    if hasattr(st, "rerun"):
+        st.rerun()
+    elif hasattr(st, "experimental_rerun"):
+        st.experimental_rerun()
+
+def get_soup(url: str) -> BeautifulSoup:
+    r = requests.get(url, headers=UA, timeout=20)
+    r.encoding = r.apparent_encoding or "utf-8"
+    return BeautifulSoup(r.text, "html.parser")
+
+def _table_to_markdown(tbl: Tag) -> str:
+    headers, rows = [], []
+    thead = tbl.find("thead")
+    if thead:
+        headers = [clean(x.get_text(" ", strip=True)) for x in thead.find_all(["th","td"])]
+    for tr in tbl.find_all("tr"):
+        cells = [clean(x.get_text(" ", strip=True)) for x in tr.find_all(["th","td"])]
+        if not cells: continue
+        if not headers:
+            headers = cells
+            continue
+        rows.append(cells)
+    if not headers: return ""
+    coln = len(headers)
+    rows = [r + [""] * (coln - len(r)) for r in rows]
+    md = []
+    md.append("| " + " | ".join(headers) + " |")
+    md.append("| " + " | ".join(["---"] * coln) + " |")
+    for r in rows:
+        md.append("| " + " | ".join(r[:coln]) + " |")
+    return "\n".join(md)
+
+def node_to_markdown(node: Tag) -> str:
+    """선택 노드를 Markdown으로 변환(P, DIV 텍스트 / TABLE → 표 / IMG → 이미지)"""
+    if isinstance(node, NavigableString):
+        return clean(str(node))
+    if not isinstance(node, Tag):
+        return ""
+    name = node.name.lower()
+    if name in ("p", "div", "span", "li", "strong"):
+        return clean(node.get_text(" ", strip=True))
+    if name == "table":
+        return _table_to_markdown(node)
+    if name == "img":
+        src = node.get("src", "")
+        alt = clean(node.get("alt", ""))
+        if src and not src.startswith("http"):
+            # 절대경로 보정(정책브리핑 등)
+            src = "https://www.korea.kr" + src if src.startswith("/") else src
+        return f"![{alt}]({src})" if src else (alt or "")
+    return clean(node.get_text(" ", strip=True))
+
+# =====================================================================
+#                   ★★★ 질문 1 · 5 전용 '구간 크롤링' ★★★
+# =====================================================================
+
+# 1) 생활법령(질문 1): 지정 ID 시작 ~ 지정 ID 끝까지 크롤링
+def parse_q1_easylaw_segment(url: str) -> str:
+    soup = get_soup(url)
+
+    # 사장님이 지정한 시작~끝 ID (포함)
+    ids_in_order = [
+        "divnull.4729.null.2214329",
+        "divnull.4729.null.2214330",
+        "divnull.4729.null.2214331",
+        "divnull.4729.null.2214332",
+        "divnull.4729.null.2214333",
     ]
 
+    pieces = []
+    for idv in ids_in_order:
+        el = soup.find(id=idv)
+        if el:
+            pieces.append(node_to_markdown(el))
 
+    # ✅ 표를 명시적으로 재생성(이 페이지 구조를 안 타고 항상 동일하게 렌더)
+    fee_table_md = """
+**🚑 구급차 요금표**
+
+| 구분 | 요금의 종류 | 「응급의료에 관한 법률」 제44조제1항제1호부터 제4호까지에 따른 의료기관 등 | 「응급의료에 관한 법률」 제44조제1항제5호에 따른 비영리법인 |
+|---|---|---|---|
+| 일반구급차 | 기본요금 (이송거리 10km 이내) | 30,000원 | 20,000원 |
+|  | 추가요금 (이송거리 10km 초과) | 1,000원/km | 800원/km |
+|  | 부가요금 (의사·간호사 또는 응급구조사 탑승) | 15,000원 | 10,000원 |
+| 특수구급차 | 기본요금 (이송거리 10km 이내) | 75,000원 | 50,000원 |
+|  | 추가요금 (이송거리 10km 초과) | 1,300원/km | 1,000원/km |
+| 공통 | 할증요금 (00:00~04:00) | 기본 및 추가요금 각 20% 가산 |  |
+""".strip()
+
+    # 지정 구간을 못 찾았을 때의 안전망
+    if not any(pieces):
+        container = soup.select_one("#conBody, .conBody, #content, .contents, article") or soup
+        txt = clean(container.get_text(" ", strip=True))
+        txt = txt[:4000] + (" …" if len(txt) > 4000 else "")
+        pieces = [txt]
+
+    body = "\n\n".join([p for p in pieces if p]) + "\n\n" + fee_table_md
+    return f"{body}\n\n[출처] {url}"
+
+
+def parse_q5_koreakr_segment(url: str) -> str:
+    soup = get_soup(url)
+
+    # 본문 루트 후보
+    root = (
+        soup.select_one("div.view_con, div.article_area, #contents, #content, article")
+        or soup
+    )
+
+    start_text = "긴급자동차는 말 그대로 신속하게 현장에 도착하는 것이 목표다"
+    end_text   = "개정안의 핵심은 이렇다"
+
+    def find_p_contains(t):
+        for p in root.find_all("p"):
+            if t in p.get_text():
+                return p
+        return None
+
+    start_node = find_p_contains(start_text)
+    end_node   = find_p_contains(end_text)
+
+    collected = []
+    if start_node and end_node:
+        cur = start_node
+        while cur:
+            if isinstance(cur, Tag):
+                # ⚠️ 이미지/표(이미지+캡션) 스킵
+                if cur.name in ("img",):
+                    pass
+                elif cur.name == "table":
+                    pass  # 테이블(이미지/캡션 포함) 통째로 생략
+                else:
+                    md = node_to_markdown(cur)
+                    if md:
+                        collected.append(md)
+            if cur == end_node:
+                break
+            cur = cur.find_next_sibling()
+
+    # 보완: 못 모았으면 시작/끝 단락만이라도 확보
+    if not collected:
+        p1 = root.find("p", string=lambda s: s and start_text in s)
+        if p1: collected.append(clean(p1.get_text(" ", strip=True)))
+        p2 = root.find("p", string=lambda s: s and end_text in s)
+        if p2: collected.append(clean(p2.get_text(" ", strip=True)))
+
+    if not collected:
+        text = clean(root.get_text(" ", strip=True))
+        collected = [text[:1500] + (" …" if len(text) > 1500 else "")]
+
+    # 🚫 캡션 문구 제거 + 이미지 마크다운(혹시 들어왔으면) 제거
+    ban_phrase = "개정된 긴급자동차에 대한 특례 조항이다"
+    filtered = []
+    for line in collected:
+        if not line:
+            continue
+        # 이미지 마크다운 제거
+        if re.search(r'!\[.*\]\(.*\)', line):
+            continue
+        # 캡션(출처=소방청) 문구 제거
+        if ban_phrase in line:
+            continue
+        filtered.append(line)
+
+    body = "\n\n".join(filtered)
+    return f"{body}\n\n[출처] {url}"
+
+# =====================================================================
+#                        (2~4번) 기존 전용/일반 파서
+# =====================================================================
+
+def parse_q2_safekorea(url: str) -> str:
+    soup = get_soup(url)
+    container = soup.select_one("#content, .contents, article, .cont, .board-view") or soup
+    keep = []
+    for p in container.find_all(["p", "li"]):
+        t = clean(p.get_text(" ", strip=True))
+        if not t or len(t) < 6: 
+            continue
+        if any(k in t for k in ["응급처치", "동의", "명시적 동의", "위법", "법적", "윤리"]):
+            keep.append(t)
+        if len(keep) >= 12:
+            break
+    body = "\n".join(f"- {k}" for k in keep) if keep else clean(container.get_text(" ", strip=True))[:4000]
+    return f"{body}\n\n[출처] {url}"
+
+def parse_q3_nfa(url: str) -> str:
+    soup = get_soup(url)
+    items = []
+    for img in soup.select("ul.safety_sense img[alt]"):
+        alt = clean(img.get("alt", ""))
+        if alt:
+            items.append(alt)
+    if not items:
+        content = soup.select_one("#content, .contents, article, .view") or soup
+        text = clean(content.get_text(" ", strip=True))
+        return text[:4000] + "\n\n[출처] " + url
+    body = "\n".join(f"- {x}" for x in items)
+    return f"{body}\n\n[출처] {url}"
+
+def parse_q4_nfa(url: str) -> str:
+    soup = get_soup(url)
+    items = []
+    for img in soup.select("ul.safety_sense img[alt]"):
+        alt = clean(img.get("alt", ""))
+        if alt:
+            items.append(alt)
+    if not items:
+        content = soup.select_one("#content, .contents, article, .view") or soup
+        text = clean(content.get_text(" ", strip=True))
+        return text[:4000] + "\n\n[출처] " + url
+    body = "\n".join(f"- {x}" for x in items)
+    return f"{body}\n\n[출처] {url}"
+
+# 질문→파서 매핑
+def extract_answer(q_text: str, url: str) -> str:
+    if "구급차 이용금액" in q_text:
+        return parse_q1_easylaw_segment(url)        # ★ 1번: 구간 지정 추출
+    if "법적인 문제" in q_text:
+        return parse_q2_safekorea(url)
+    if "구급신고 요령" in q_text:
+        return parse_q3_nfa(url)
+    if "도착 전 준비" in q_text:
+        return parse_q4_nfa(url)
+    if "긴급자동차" in q_text:
+        return parse_q5_koreakr_segment(url)        # ★ 5번: 구간 지정 추출
+    # 일반 fallback
+    soup = get_soup(url)
+    content = soup.select_one("article, #content, .contents, .cont, .view, section, main, div") or soup
+    text = clean(content.get_text(" ", strip=True))
+    return text[:4000] + "\n\n[출처] " + url
+
+# ===== DB I/O =====
+def _conn():
+    return pymysql.connect(**DB_CONFIG)
+
+def load_faq_from_db():
+    try:
+        conn = _conn()
+        with conn.cursor() as cur:
+            qs = list(ORDER_MAP.keys())
+            ph = ",".join(["%s"] * len(qs))
+            cur.execute(
+                f"SELECT faq_question, faq_answer FROM emergency_faq WHERE faq_question IN ({ph})",
+                qs,
+            )
+            rows = cur.fetchall()
+        conn.close()
+        data = [{"question": q, "answer": a} for (q, a) in rows]
+        return sorted(data, key=lambda x: ORDER_MAP.get(x["question"], 999))
+    except Exception:
+        return []
+
+def crawl_and_update():
+    st.info("📌 크롤링 중입니다. 잠시만 기다려주세요...")
+    results = []
+    for item in QUESTION_SOURCES:
+        q, url = item["q"], item["url"]
+        try:
+            a = extract_answer(q, url)
+            results.append((q, a))
+            st.success(f"✅ {q} (완료)")
+            time.sleep(0.2)
+        except Exception as e:
+            st.error(f"❌ {q} 실패: {e}")
+
+    if not results:
+        st.error("⛔ 크롤링 실패 — 결과 없음")
+        return False
+
+    conn = _conn()
+    try:
+        with conn.cursor() as cur:
+            cur.execute(CREATE_TABLE_SQL)
+            for q, a in results:
+                cur.execute(UPSERT_SQL, (q, a))
+        conn.commit()
+        st.success(f"✅ 총 {len(results)}건 DB 저장/갱신 완료")
+        return True
+    except Exception as e:
+        conn.rollback()
+        st.error(f"⛔ DB 오류: {e}")
+        return False
+    finally:
+        conn.close()
+
+# ===== Streamlit UI =====
 def show_faq_page():
     st.markdown('<div class="section-header"><h2>❓ 자주 묻는 질문 (FAQ)</h2></div>', unsafe_allow_html=True)
 
-    # MySQL에서 FAQ 데이터 로드
-    faqs = load_faq_data()
-    
-    # 데이터 로드 상태 표시
+    faqs = load_faq_from_db()
     if not faqs:
-        st.warning("FAQ 데이터를 불러올 수 없습니다.")
+        st.warning("아직 FAQ 데이터가 없습니다. 아래 버튼으로 크롤링을 먼저 실행하세요.")
+        if st.button("🔄 크롤링 실행하기"):
+            if crawl_and_update():
+                safe_rerun()
         return
-    
-    # 데이터베이스 연결 상태 정보 (개발용)
-    if st.sidebar.checkbox("🔧 DB 연결 정보 표시", value=False):
-        try:
-            connection = get_mysql_connection()
-            if connection:
-                st.sidebar.success("✅ MySQL 연결 성공")
-                connection.close()
-            else:
-                st.sidebar.error("❌ MySQL 연결 실패 - Fallback 데이터 사용")
-        except Exception as e:
-            st.sidebar.error(f"❌ 연결 오류: {e}")
 
-    # FAQ 항목들을 expander로 표시
-    for i, faq in enumerate(faqs):
+    for faq in faqs:
         with st.expander(faq["question"]):
             st.markdown(faq["answer"])
 
+    st.markdown("---")
+    st.markdown("### 📞 응급상황 연락처")
+    c1, c2, c3 = st.columns(3)
+    with c1:
+        st.markdown("""**응급상황**
+- 🚑 **119**: 소방서(구급·화재)
+- 🚓 **112**: 경찰
+- ⛑️ **1339**: 응급의료정보센터""")
+    with c2:
+        st.markdown("""**의료상담**
+- 📱 **1577-1199**: 응급의료정보센터
+- 🏥 **1644-9999**: 심평원
+- 💊 **1661**: 약물중독정보센터""")
+    with c3:
+        st.markdown("""**기타 도움**
+- 🆘 **1588-9191**: 생명의전화
+- 👨‍⚕️ **129**: 보건복지상담
+- 🔥 **1661-2119**: 소방안전신고""")
+
+def main():
+    st.title("🚒 119 긴급 FAQ 시스템")
+    show_faq_page()
+
+if __name__ == "__main__":
+    main()
