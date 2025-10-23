@@ -2,22 +2,22 @@ import pandas as pd
 import pymysql
 
 
-host = "127.0.0.1"
-user = "root"
-password = "0000"
-database = "test"
+# host = "127.0.0.1"
+# user = "root"
+# password = "0000"
+# database = "test"
 
-# host="192.168.0.23",
-# user="first_guest",
-# password="1234",
-# database="emergency"
+host="192.168.0.23"
+user="first_guest"
+password="1234"
+database="emergency"
 
 files = [
-    "data/2019_car.csv",
-    "data/2020_car.csv",
-    "data/2021_car.csv",
-    "data/2022_car.csv",
-    "data/2023_car.csv"]
+    "DATA/2019_car.csv",
+    "DATA/2020_car.csv",
+    "DATA/2021_car.csv",
+    "DATA/2022_car.csv",
+    "DATA/2023_car.csv"]
 
 
 
