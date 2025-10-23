@@ -73,15 +73,3 @@ def show_overview_page():
         - 1시간 30분 후 이송 가능
         """)
         
-        st.markdown("""
-        <div class="alert-box">
-            <h4>📊 통계로 보는 문제의 심각성</h4>
-            <ul>
-                <li><strong>평균 출동시간</strong>: 12.3분 (목표 8분 대비 54% 초과)</li>
-                <li><strong>구급차 가동률</strong>: 65% (권장 30-50% 대비 과부하)</li>
-                <li><strong>응급실 대기시간</strong>: 평균 45분</li>
-                <li><strong>지역별 격차</strong>: 최대 3배 차이</li>
-            </ul>
-        </div>
-        """, unsafe_allow_html=True)
-    

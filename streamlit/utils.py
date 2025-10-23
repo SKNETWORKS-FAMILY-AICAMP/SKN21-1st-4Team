@@ -1,46 +1,123 @@
 import pandas as pd
 import numpy as np
 import streamlit as st
+import pymysql
 
-# 임시 데이터 생성 함수
+def get_mysql_connection():
+    """MySQL 데이터베이스 연결"""
+    try:
+        connection = pymysql.connect(
+            host="192.168.0.23",
+            database="emergency", 
+            user="first_guest",
+            password="1234",
+            port=3306
+        )
+        return connection
+    except Exception as e:
+        st.error(f"MySQL 연결 오류: {e}")
+        return None
+
+@st.cache_data(ttl=3600)  # 1시간 캐시
+def load_emergency_car_data():
+    """emergency_car 테이블에서 구급차 및 이송환자 데이터 로드"""
+    try:
+        connection = get_mysql_connection()
+        if connection is None:
+            return pd.DataFrame()
+        
+        query = """
+        SELECT year, car_local as 지역, car_count as 구급차수, emp_count as 이송환자수
+        FROM emergency_car 
+        ORDER BY year, car_local
+        """
+        df = pd.read_sql(query, connection)
+        connection.close()
+        
+        # 연도를 정수형으로 변환
+        df['연도'] = df['year'].astype(int)
+        df = df.drop('year', axis=1)
+        
+        return df
+        
+    except Exception as e:
+        st.error(f"구급차 데이터 로드 중 오류가 발생했습니다: {e}")
+        return pd.DataFrame()
+
+@st.cache_data(ttl=3600)  # 1시간 캐시
+def load_emergency_move_data():
+    """emergency_move 테이블에서 후송 횟수 데이터 로드"""
+    try:
+        connection = get_mysql_connection()
+        if connection is None:
+            return pd.DataFrame()
+        
+        query = """
+        SELECT year, move_local as 지역, move_count as 후송횟수
+        FROM emergency_move 
+        ORDER BY year, move_local
+        """
+        df = pd.read_sql(query, connection)
+        connection.close()
+        
+        # 연도를 정수형으로 변환
+        df['연도'] = df['year'].astype(int)
+        df = df.drop('year', axis=1)
+        
+        return df
+        
+    except Exception as e:
+        st.error(f"후송 데이터 로드 중 오류가 발생했습니다: {e}")
+        return pd.DataFrame()
+
+@st.cache_data(ttl=3600)  # 1시간 캐시  
+def load_emergency_ex_data():
+    """emergency_ex 테이블에서 환자 정보 데이터 로드"""
+    try:
+        connection = get_mysql_connection()
+        if connection is None:
+            return pd.DataFrame()
+        
+        query = """
+        SELECT year, local as 지역, cause as 증상, gender as 성별, job as 직업
+        FROM emergency_ex 
+        ORDER BY year, local
+        """
+        df = pd.read_sql(query, connection)
+        connection.close()
+        
+        # 연도를 정수형으로 변환
+        df['연도'] = df['year'].astype(int)
+        df = df.drop('year', axis=1)
+        
+        return df
+        
+    except Exception as e:
+        st.error(f"환자 정보 데이터 로드 중 오류가 발생했습니다: {e}")
+        return pd.DataFrame()
+
+def get_regional_data(region):
+    """특정 지역의 종합 데이터 반환"""
+    car_data = load_emergency_car_data()
+    move_data = load_emergency_move_data()
+    ex_data = load_emergency_ex_data()
+    
+    # 지역별 필터링
+    region_car = car_data[car_data['지역'] == region] if not car_data.empty else pd.DataFrame()
+    region_move = move_data[move_data['지역'] == region] if not move_data.empty else pd.DataFrame()
+    region_ex = ex_data[ex_data['지역'] == region] if not ex_data.empty else pd.DataFrame()
+    
+    return {
+        'car_data': region_car,
+        'move_data': region_move,
+        'ex_data': region_ex
+    }
+
+# 통합 데이터 생성 함수 (기존 create_sample_data 대체)
 @st.cache_data
 def create_sample_data():
-    regions = ['서울', '부산', '대구', '인천', '광주', '대전', '울산', '세종', 
-               '경기', '강원', '충북', '충남', '전북', '전남', '경북', '경남', '제주']
-    
-    years = [2020, 2021, 2022, 2023, 2024]
-    
-    data = []
-    for region in regions:
-        for year in years:
-            # 인구 대비 적절한 구급차 수와 이송환자 수 생성
-            base_ambulances = np.random.randint(10, 20) if region in ['서울', '경기', '부산'] else np.random.randint(15, 30)
-            base_patients = base_ambulances * np.random.randint(800, 1500)  # 구급차당 연간 이송환자 수
-            
-            # 연도별 증가 트렌드 반영
-            year_factor = 1 + (year - 2020) * 0.02  # 연간 2% 증가
-            
-            # 지역별 인구 설정 (단위: 만명)
-            population_map = {
-                '서울': 960, '경기': 1350, '부산': 340, '대구': 240, '인천': 300,
-                '광주': 150, '대전': 150, '울산': 115, '세종': 35,
-                '강원': 150, '충북': 160, '충남': 220, '전북': 180, '전남': 185,
-                '경북': 265, '경남': 335, '제주': 67
-            }
-            
-            population = population_map.get(region, 100)
-            
-            data.append({
-                '지역': region,
-                '연도': year,
-                '구급차수': int(base_ambulances * year_factor),
-                '이송환자수': int(base_patients * year_factor),
-                '인구수': population * 10000,  # 실제 인구수로 변환
-                '응답시간': np.random.normal(9, 2),  # 평균 9분, 표준편차 2분
-                '가동률': np.random.uniform(0.4, 0.8)  # 40-80% 가동률
-            })
-    
-    return pd.DataFrame(data)
+    """하위 호환성을 위한 통합 데이터 생성 함수"""
+    return load_emergency_car_data()
 
 # 필요 구급차 수 계산 함수
 def calculate_required_ambulances(calls_per_year, avg_cycle_time_hours, target_utilization):

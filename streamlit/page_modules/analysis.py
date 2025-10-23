@@ -122,20 +122,27 @@ def show_analysis_page():
         # 연도별 탭으로 데이터 표시
         st.markdown("#### 📋 연도별 상세 데이터")
         
-        # 연도별 탭 생성 (최신 연도부터)
-        years = sorted(df['연도'].unique(), reverse=True)   
-        year_tabs = st.tabs([f"{year}년" for year in years])
-        
-        for i, year in enumerate(years):
-            with year_tabs[i]:
-                year_data = df[df['연도'] == year].copy()
-                year_data = year_data.sort_values('구급차수', ascending=False)
+        # 데이터가 있는지 확인
+        if not df.empty and '연도' in df.columns:
+            # 연도별 탭 생성 (최신 연도부터)
+            years = sorted(df['연도'].unique(), reverse=True)   
+            if len(years) > 0:
+                year_tabs = st.tabs([f"{year}년" for year in years])
                 
-                # 연도 컬럼 제거 (탭에서 이미 연도가 표시되므로)
-                year_data = year_data.drop('연도', axis=1)
-                
-                # 전체 데이터 테이블 (스크롤바 없이 정적 테이블로 표시)
-                st.table(year_data)
+                for i, year in enumerate(years):
+                    with year_tabs[i]:
+                        year_data = df[df['연도'] == year].copy()
+                        year_data = year_data.sort_values('구급차수', ascending=False)
+                        
+                        # 연도 컬럼 제거 (탭에서 이미 연도가 표시되므로)
+                        year_data = year_data.drop('연도', axis=1)
+                        
+                        # 전체 데이터 테이블 (스크롤바 없이 정적 테이블로 표시)
+                        st.table(year_data)
+            else:
+                st.warning("📊 연도별 데이터가 없습니다.")
+        else:
+            st.warning("📊 표시할 데이터가 없습니다. 데이터베이스 연결을 확인해주세요.")
     
     with tab2:
         # 구급차 수요 분석 섹션
@@ -177,18 +184,21 @@ def show_analysis_page():
         - 연간 응급호출 수: 이송환자수 × 2.5 (매우 많은 호출 가정)
         - 주요 지역 구급차 수: 40% 감소 적용 (테스트용)
         """)
+        
+        # 데이터가 있는지 확인
+        if not df.empty and '연도' in df.columns:
+            # 연도별 탭 생성
+            years_analysis = sorted(df['연도'].unique(), reverse=True)
+            if len(years_analysis) > 0:
+                analysis_tabs = st.tabs([f"{year}년 분석" for year in years_analysis])
                 
-        # 연도별 탭 생성
-        years_analysis = sorted(df['연도'].unique(), reverse=True)
-        analysis_tabs = st.tabs([f"{year}년 분석" for year in years_analysis])
-        
-        # 고정값 설정
-        CYCLE_TIME_HOURS = 1.5  # 90분
-        TARGET_UTILIZATION = 0.5  # 50%
-        
-        for i, year in enumerate(years_analysis):
-            with analysis_tabs[i]:
-                year_data = df[df['연도'] == year].copy()
+                # 고정값 설정
+                CYCLE_TIME_HOURS = 1.5  # 90분
+                TARGET_UTILIZATION = 0.5  # 50%
+                
+                for i, year in enumerate(years_analysis):
+                    with analysis_tabs[i]:
+                        year_data = df[df['연도'] == year].copy()
                 
                 # 각 지역별 분석 계산
                 analysis_results = []
@@ -357,4 +367,8 @@ def show_analysis_page():
                         )
                     }
                 )
+            else:
+                st.warning("📊 분석할 연도별 데이터가 없습니다.")
+        else:
+            st.warning("📊 표시할 데이터가 없습니다. 데이터베이스 연결을 확인해주세요.")
                 

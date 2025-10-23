@@ -58,14 +58,12 @@ def ensure_table(engine):
     """
     with engine.begin() as conn:
         conn.execute(text(ddl))
+        
 def load_file(path: str) -> pd.DataFrame:
     """
     엑셀 파일을 읽어 필요한 컬럼만 추출/정리하여 반환합니다.
     CSV를 사용할 경우에는 pd.read_excel -> pd.read_csv로 바꾸세요.
     """
-    import os
-    import pandas as pd
-
     # 엑셀: 첫 번째 시트 기준
     df = pd.read_excel(path, dtype=str)
 
