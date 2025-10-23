@@ -292,7 +292,7 @@ def show_analysis_page():
                     delta_adequate = adequate_regions - prev_adequate_regions
                     delta_total_shortage = total_shortage - prev_total_shortage
                 else:
-                    # 전년도 데이터가 없는 경우 (2020년)
+                    # 전년도 데이터가 없는 경우 (2019년)
                     delta_shortage = None
                     delta_adequate = None
                     delta_total_shortage = None

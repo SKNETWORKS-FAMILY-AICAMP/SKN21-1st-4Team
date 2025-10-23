@@ -16,11 +16,22 @@ DB_CONFIG = {
     "autocommit": False,   # 커밋은 수동으로
 }
 
-# ===== UPSERT만 사용 (CREATE TABLE 제거) =====
+# ===== UPSERT 및 테이블 생성 =====
+CREATE_TABLE_SQL = """
+CREATE TABLE IF NOT EXISTS emergency_faq (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    faq_question VARCHAR(255) NOT NULL UNIQUE,
+    faq_answer TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+"""
+
 UPSERT_SQL = """
 INSERT INTO emergency_faq (faq_question, faq_answer)
 VALUES (%s, %s)
-ON DUPLICATE KEY UPDATE faq_answer = VALUES(faq_answer);
+ON DUPLICATE KEY UPDATE 
+    faq_answer = VALUES(faq_answer);
 """
 
 # ===== 질문 & 링크 =====
@@ -266,36 +277,52 @@ def load_faq_from_db():
     except Exception:
         return []
 
-# ===== 크롤링 & 저장 (CREATE TABLE 제거) =====
+# ===== 크롤링 & 저장 =====
 def crawl_and_update():
     st.info("📌 크롤링 중입니다. 잠시만 기다려주세요...")
+    
+    # 크롤링 실행
     results = []
-    for item in QUESTION_SOURCES:
+    for i, item in enumerate(QUESTION_SOURCES):
         q, url = item["q"], item["url"]
         try:
+            st.write(f"📍 진행 중: {i+1}/{len(QUESTION_SOURCES)} - {q}")
             a = extract_answer(q, url)
-            results.append((q, a))
-            st.success(f"✅ {q} (완료)")
-            time.sleep(0.2)
+            if a and len(a.strip()) > 10:  # 최소 10자 이상의 답변만 저장
+                results.append((q, a))
+                st.success(f"✅ {q} (완료 - {len(a)}자)")
+            else:
+                st.warning(f"⚠️ {q} (답변이 너무 짧음)")
+            time.sleep(1)  # 서버 부하 방지
         except Exception as e:
             st.error(f"❌ {q} 실패: {e}")
+            continue
 
     if not results:
         st.error("⛔ 크롤링 실패 — 결과 없음")
         return False
 
+    # DB 저장
     conn = _conn()
     try:
         with conn.cursor() as cur:
             for q, a in results:
-                cur.execute(UPSERT_SQL, (q, a))   # ★ CREATE TABLE 실행 안 함
+                cur.execute(UPSERT_SQL, (q, a))
+                st.write(f"💾 저장: {q}")
         conn.commit()
         st.success(f"✅ 총 {len(results)}건 DB 저장/갱신 완료")
+        
+        # 저장 확인
+        with conn.cursor() as cur:
+            cur.execute("SELECT COUNT(*) FROM emergency_faq")
+            total_count = cur.fetchone()[0]
+            st.info(f"📊 현재 DB에 총 {total_count}개의 FAQ가 저장되어 있습니다.")
+        
         return True
     except Exception as e:
         conn.rollback()
-        # 테이블이 없다면 1146 오류가 날 수 있음
-        st.error(f"⛔ DB 오류: {e}")
+        st.error(f"⛔ DB 저장 오류: {e}")
+        st.error(f"상세 오류: {str(e)}")
         return False
     finally:
         conn.close()
