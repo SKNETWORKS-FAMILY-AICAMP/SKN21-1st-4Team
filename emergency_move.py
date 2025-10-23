@@ -2,9 +2,9 @@ import pandas as pd
 import pymysql
 
 
-host="127.0.0.1",
-user="root",
-password="0000",
+host="192.168.0.23"
+user="first_guest"
+password="1234"
 database="emergency"
 
 
@@ -14,11 +14,11 @@ database="emergency"
 # database="emergency"
 
 files = [
-    "data/2019_move.csv",
-    "data/2020_move.csv",
-    "data/2021_move.csv",
-    "data/2022_move.csv",
-    "data/2023_move.csv"]
+    "DATA/2019_move.csv",
+    "DATA/2020_move.csv",
+    "DATA/2021_move.csv",
+    "DATA/2022_move.csv",
+    "DATA/2023_move.csv"]
 
 
 
@@ -27,7 +27,9 @@ with pymysql.connect(host=host, user=user, password=password, database=database)
 
         for f in files:
             df = pd.read_csv(f)
-
+            
+            # 컬럼명 공백 제거
+            df.columns = df.columns.str.strip()
             
             df = df[["move_local", "move_count"]]
             
