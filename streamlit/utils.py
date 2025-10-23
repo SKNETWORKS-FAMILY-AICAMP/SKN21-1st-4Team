@@ -14,7 +14,7 @@ def create_sample_data():
     for region in regions:
         for year in years:
             # 인구 대비 적절한 구급차 수와 이송환자 수 생성
-            base_ambulances = np.random.randint(50, 300) if region in ['서울', '경기', '부산'] else np.random.randint(15, 100)
+            base_ambulances = np.random.randint(10, 20) if region in ['서울', '경기', '부산'] else np.random.randint(15, 30)
             base_patients = base_ambulances * np.random.randint(800, 1500)  # 구급차당 연간 이송환자 수
             
             # 연도별 증가 트렌드 반영
