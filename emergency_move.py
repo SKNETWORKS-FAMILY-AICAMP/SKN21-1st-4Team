@@ -27,9 +27,7 @@ with pymysql.connect(host=host, user=user, password=password, database=database)
 
         for f in files:
             df = pd.read_csv(f)
-            
-            # 컬럼명 공백 제거
-            df.columns = df.columns.str.strip()
+
             
             df = df[["move_local", "move_count"]]
             

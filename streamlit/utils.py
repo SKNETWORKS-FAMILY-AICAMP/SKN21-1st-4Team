@@ -27,7 +27,7 @@ def load_emergency_car_data():
             return pd.DataFrame()
         
         query = """
-        SELECT year, car_local as 지역, car_count as 구급차수, emp_count as 이송환자수
+        SELECT year, car_local as 지역, car_count as 구급차수
         FROM emergency_car 
         ORDER BY year, car_local
         """
@@ -53,7 +53,7 @@ def load_emergency_move_data():
             return pd.DataFrame()
         
         query = """
-        SELECT year, move_local as 지역, move_count as 후송횟수
+        SELECT year, move_local as 지역, move_count as 이송환자수
         FROM emergency_move 
         ORDER BY year, move_local
         """
@@ -116,8 +116,44 @@ def get_regional_data(region):
 # 통합 데이터 생성 함수 (기존 create_sample_data 대체)
 @st.cache_data
 def create_sample_data():
-    """하위 호환성을 위한 통합 데이터 생성 함수"""
-    return load_emergency_car_data()
+    """통합 데이터 생성 - 구급차 데이터와 후송 데이터를 병합"""
+    car_data = load_emergency_car_data()
+    move_data = load_emergency_move_data()
+    
+    if car_data.empty and move_data.empty:
+        return pd.DataFrame()
+    
+    # 구급차 데이터가 비어있으면 후송 데이터만 반환
+    if car_data.empty:
+        return move_data
+    
+    # 후송 데이터가 비어있으면 구급차 데이터만 반환  
+    if move_data.empty:
+        return car_data
+    
+    # 두 데이터를 병합 (연도와 지역을 기준으로)
+    try:
+        merged_data = pd.merge(
+            car_data, 
+            move_data, 
+            on=['연도', '지역'], 
+            how='outer'
+        )
+        
+        # NaN 값을 0으로 채우기
+        merged_data = merged_data.fillna(0)
+        
+        # 숫자형 컬럼의 데이터 타입 정리
+        numeric_cols = ['구급차수', '이송환자수']
+        for col in numeric_cols:
+            if col in merged_data.columns:
+                merged_data[col] = pd.to_numeric(merged_data[col], errors='coerce').fillna(0).astype(int)
+        
+        return merged_data
+        
+    except Exception as e:
+        st.error(f"데이터 병합 중 오류 발생: {e}")
+        return car_data  # 오류 시 구급차 데이터만 반환
 
 # 필요 구급차 수 계산 함수
 def calculate_required_ambulances(calls_per_year, avg_cycle_time_hours, target_utilization):

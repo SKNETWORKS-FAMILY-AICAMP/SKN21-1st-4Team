@@ -3,7 +3,12 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
-from utils import create_sample_data, calculate_required_ambulances
+import sys
+import os
+
+# utils.py 경로 추가
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', 'streamlit'))
+from utils import create_sample_data, calculate_required_ambulances, load_emergency_ex_data
 
 def show_analysis_page():
     st.markdown('<div class="section-header"><h2>📊 데이터 분석 및 구급차 수요 분석</h2></div>', unsafe_allow_html=True)
@@ -33,72 +38,25 @@ def show_analysis_page():
         filtered_df = df[df['연도'] == selected_year].copy()
         
         # 지역별 구급차수 및 이송환자수 통합 분석
-        st.markdown(f"#### 📊 {selected_year}년 지역별 구급차수 및 이송환자수 현황")
+        st.markdown(f"#### 📊 {selected_year}년 지역별 데이터 현황")
         
         if not filtered_df.empty:
-            # plotly graph_objects를 사용한 이중 Y축 차트
+            # 간단한 요약 통계만 표시
+            st.markdown("#### 📈 선택된 연도 데이터 요약")
             
-            # 구급차수 기준으로 정렬
-            sorted_df = filtered_df.sort_values('구급차수', ascending=True)
-            
-            # 이중 Y축 서브플롯 생성
-            fig = make_subplots(specs=[[{"secondary_y": True}]])
-            
-            # 구급차수 막대 그래프 (왼쪽 Y축)
-            fig.add_trace(
-                go.Bar(
-                    x=sorted_df['지역'],
-                    y=sorted_df['구급차수'],
-                    name='구급차수',
-                    marker_color='#1f77b4',
-                    opacity=0.8,
-                    offsetgroup=1
-                ),
-                secondary_y=False,
-            )
-            
-            # 이송환자수 막대 그래프 (오른쪽 Y축)
-            fig.add_trace(
-                go.Bar(
-                    x=sorted_df['지역'],
-                    y=sorted_df['이송환자수'],
-                    name='이송환자수',
-                    marker_color='#ff7f0e',
-                    opacity=0.7,
-                    yaxis='y2',
-                    offsetgroup=2
-                ),
-                secondary_y=True,
-            )
-            
-            # X축 설정
-            fig.update_xaxes(title_text="지역", tickangle=-45)
-            
-            # Y축 설정
-            fig.update_yaxes(title_text="구급차수 (대)", secondary_y=False, title_font_color='#1f77b4')
-            fig.update_yaxes(title_text="이송환자수 (명)", secondary_y=True, title_font_color='#ff7f0e')
-            
-            # 레이아웃 설정
-            fig.update_layout(
-                title=f'{selected_year}년 지역별 구급차수 및 이송환자수',
-                plot_bgcolor='rgba(0,0,0,0)',
-                paper_bgcolor='rgba(0,0,0,0)',
-                height=500,
-                barmode='group',
-                legend=dict(
-                    orientation="h",
-                    yanchor="bottom",
-                    y=1.02,
-                    xanchor="right",
-                    x=1
-                ),
-                hovermode='x unified'
-            )
-            
-            st.plotly_chart(fig, use_container_width=True)
+            col1, col2 = st.columns(2)
+            with col1:
+                total_ambulances = filtered_df['구급차수'].sum()
+                st.metric("총 구급차 수", f"{total_ambulances:,}대")
+            with col2:
+                total_patients = filtered_df['이송환자수'].sum()
+                st.metric("총 이송환자 수", f"{total_patients:,}명")
             
             # 추가 분석: 구급차 1대당 이송환자수
             st.markdown("#### 📈 구급차 효율성 분석")
+            
+            # 구급차수 기준으로 정렬 및 효율성 계산
+            sorted_df = filtered_df.sort_values('구급차수', ascending=True)
             sorted_df['구급차당_이송환자수'] = sorted_df['이송환자수'] / sorted_df['구급차수']
             sorted_df = sorted_df.sort_values('구급차당_이송환자수', ascending=False)
             
@@ -137,12 +95,95 @@ def show_analysis_page():
                         # 연도 컬럼 제거 (탭에서 이미 연도가 표시되므로)
                         year_data = year_data.drop('연도', axis=1)
                         
-                        # 전체 데이터 테이블 (스크롤바 없이 정적 테이블로 표시)
-                        st.table(year_data)
+                        # 전체 데이터 테이블 (인덱스 숨김)
+                        st.dataframe(year_data, use_container_width=True, hide_index=True)
             else:
                 st.warning("📊 연도별 데이터가 없습니다.")
         else:
             st.warning("📊 표시할 데이터가 없습니다. 데이터베이스 연결을 확인해주세요.")
+        
+        # 원그래프 섹션 추가
+        st.markdown("#### 📊 환자 정보 분석")
+        
+        # emergency_ex 데이터 로드
+        ex_data = load_emergency_ex_data()
+        
+        if not ex_data.empty:
+            # 연도 선택 (상단에서 선택한 연도와 동일하게)
+            selected_ex_year = selected_year
+            ex_filtered = ex_data[ex_data['연도'] == selected_ex_year].copy()
+            
+            if not ex_filtered.empty:
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    # 성별 비율 원그래프
+                    gender_counts = ex_filtered['성별'].value_counts()
+                    if not gender_counts.empty:
+                        gender_fig = px.pie(
+                            values=gender_counts.values,
+                            names=gender_counts.index,
+                            title=f'{selected_ex_year}년 성별 비율',
+                            color_discrete_sequence=['#FF6B9D', '#4ECDC4']
+                        )
+                        gender_fig.update_traces(textposition='inside', textinfo='percent+label')
+                        gender_fig.update_layout(
+                            height=400,
+                            showlegend=True,
+                            plot_bgcolor='rgba(0,0,0,0)',
+                            paper_bgcolor='rgba(0,0,0,0)'
+                        )
+                        st.plotly_chart(gender_fig, use_container_width=True)
+                    else:
+                        st.warning("성별 데이터가 없습니다.")
+                
+                with col2:
+                    # 증상 비율 원그래프 (상위 10개만)
+                    cause_counts = ex_filtered['증상'].value_counts().head(10)
+                    if not cause_counts.empty:
+                        cause_fig = px.pie(
+                            values=cause_counts.values,
+                            names=cause_counts.index,
+                            title=f'{selected_ex_year}년 주요 증상 분류 (상위 10개)',
+                            color_discrete_sequence=px.colors.qualitative.Set3
+                        )
+                        cause_fig.update_traces(textposition='inside', textinfo='percent+label')
+                        cause_fig.update_layout(
+                            height=400,
+                            showlegend=True,
+                            plot_bgcolor='rgba(0,0,0,0)',
+                            paper_bgcolor='rgba(0,0,0,0)'
+                        )
+                        st.plotly_chart(cause_fig, use_container_width=True)
+                    else:
+                        st.warning("증상 데이터가 없습니다.")
+                
+                # 통계 요약
+                st.markdown("##### 📈 통계 요약")
+                col1, col2, col3, col4 = st.columns(4)
+                
+                with col1:
+                    total_patients = len(ex_filtered)
+                    st.metric("총 환자 수", f"{total_patients:,}명")
+                
+                with col2:
+                    if '성별' in ex_filtered.columns:
+                        male_ratio = (ex_filtered['성별'] == '남').mean() * 100
+                        st.metric("남성 비율", f"{male_ratio:.1f}%")
+                
+                with col3:
+                    if '성별' in ex_filtered.columns:
+                        female_ratio = (ex_filtered['성별'] == '여').mean() * 100
+                        st.metric("여성 비율", f"{female_ratio:.1f}%")
+                
+                with col4:
+                    if '증상' in ex_filtered.columns:
+                        unique_symptoms = ex_filtered['증상'].nunique()
+                        st.metric("증상 종류", f"{unique_symptoms}개")
+            else:
+                st.warning(f"{selected_ex_year}년 환자 정보 데이터가 없습니다.")
+        else:
+            st.warning("환자 정보 데이터베이스에 연결할 수 없습니다.")
     
     with tab2:
         # 구급차 수요 분석 섹션
