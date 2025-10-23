@@ -80,7 +80,7 @@ def show_analysis_page():
             
             # 레이아웃 설정
             fig.update_layout(
-                title=f'{selected_year}년 지역별 구급차수 및 이송환자수 (이중 Y축)',
+                title=f'{selected_year}년 지역별 구급차수 및 이송환자수',
                 plot_bgcolor='rgba(0,0,0,0)',
                 paper_bgcolor='rgba(0,0,0,0)',
                 height=500,
@@ -119,154 +119,242 @@ def show_analysis_page():
             )
             st.plotly_chart(efficiency_fig, use_container_width=True)
         
-        # 데이터 테이블 (모든 연도 데이터 표시)
-        st.markdown("#### 📋 전체 연도별 상세 데이터 (2020-2024)")
+        # 연도별 탭으로 데이터 표시
+        st.markdown("#### 📋 연도별 상세 데이터")
         
-        # 모든 데이터를 연도별로 정렬하여 표시
-        all_data = df[['연도', '지역', '구급차수', '이송환자수']].copy()
-        all_data = all_data.sort_values(['연도', '구급차수'], ascending=[False, False])
+        # 연도별 탭 생성 (최신 연도부터)
+        years = sorted(df['연도'].unique(), reverse=True)   
+        year_tabs = st.tabs([f"{year}년" for year in years])
         
-        st.dataframe(all_data, use_container_width=True, hide_index=True)
+        for i, year in enumerate(years):
+            with year_tabs[i]:
+                year_data = df[df['연도'] == year].copy()
+                year_data = year_data.sort_values('구급차수', ascending=False)
+                
+                # 연도 컬럼 제거 (탭에서 이미 연도가 표시되므로)
+                year_data = year_data.drop('연도', axis=1)
+                
+                # 전체 데이터 테이블 (스크롤바 없이 정적 테이블로 표시)
+                st.table(year_data)
     
     with tab2:
         # 구급차 수요 분석 섹션
         st.markdown("### 🧮 구급차 필요 대수 계산")
         
         # 계산 공식 설명
-        st.markdown("""
-        #### 📐 계산 공식
+        st.markdown("#### 📐 계산 공식")
         
-        **필요 구급차 수 = (호출량 × 평균 사이클 타임) / 목표 가동률**
+        # 여백을 위한 빈 공간 추가
+        st.markdown("<br>", unsafe_allow_html=True)
         
-        - **평균 사이클 타임**: 출동부터 복귀까지의 시간
-          - 도시 지역: 30-60분
-          - 농촌 지역: 120-150분
-        - **목표 가동률**: 30-50% (과부하 방지를 위한 여유율 확보)
+        # 메인 공식을 LaTeX로 표시 (더 많은 여백과 크기 조정)
+        st.latex(r"""
+        \displaystyle
+        \text{필요 구급차 수} = \frac{\text{연간 호출량} \times \text{평균 사이클 타임}}{\text{목표 가동률}}
         """)
         
-        # 계산기 섹션
-        col1, col2 = st.columns([1, 1])
+        # 여백을 위한 빈 공간 추가
+        st.markdown("<br>", unsafe_allow_html=True)
         
-        with col1:
-            st.markdown("#### 📊 입력 값 설정")
-            
-            calls_per_year = st.number_input(
-                "연간 응급호출 수:",
-                min_value=1000,
-                max_value=100000,
-                value=15000,
-                step=500,
-                help="해당 지역의 연간 예상 응급호출 횟수",
-                key="calls_input"
-            )
-            
-            region_type = st.selectbox(
-                "지역 유형:",
-                ["도시 지역", "농촌 지역", "사용자 정의"],
-                key="region_type_select"
-            )
-            
-            if region_type == "도시 지역":
-                cycle_time = st.slider("평균 사이클 타임 (분):", 30, 60, 45, key="cycle_urban")
-            elif region_type == "농촌 지역":
-                cycle_time = st.slider("평균 사이클 타임 (분):", 120, 150, 135, key="cycle_rural")
-            else:
-                cycle_time = st.slider("평균 사이클 타임 (분):", 20, 200, 60, key="cycle_custom")
-            
-            target_utilization = st.slider(
-                "목표 가동률 (%):",
-                min_value=20,
-                max_value=70,
-                value=40,
-                step=5,
-                help="권장: 30-50% (여유율 확보를 위해)",
-                key="utilization_slider"
-            )
-            
-            # 계산 실행
-            cycle_time_hours = cycle_time / 60
-            utilization_decimal = target_utilization / 100
-            
-            required_ambulances = calculate_required_ambulances(
-                calls_per_year, cycle_time_hours, utilization_decimal
-            )
-            
-            current_ambulances = st.number_input(
-                "현재 구급차 수:",
-                min_value=1,
-                max_value=500,
-                value=required_ambulances,
-                help="비교 분석을 위한 현재 보유 구급차 수",
-                key="current_ambulances_input"
-            )
+        st.markdown("""
+        **변수 설명:**
+        - **연간 호출량**: 해당 지역의 연간 응급호출 횟수
+        - **평균 사이클 타임**: 출동부터 복귀까지의 시간 (시간 단위)
+          - 도시 지역: 0.5 ~ 1.0 시간 (30-60분)
+          - 농촌 지역: 2.0 ~ 2.5 시간 (120-150분)
+        - **목표 가동률**: 0.3 ~ 0.5 (30-50%) - 과부하 방지를 위한 여유율 확보
+        """)
         
-        with col2:
-            st.markdown("#### 📈 분석 결과")
-            
-            # 결과 표시
-            st.markdown(f"""
-            <div class="metric-card">
-                <h4>🎯 계산 결과</h4>
-                <ul>
-                    <li><strong>필요 구급차 수</strong>: {required_ambulances}대</li>
-                    <li><strong>현재 구급차 수</strong>: {current_ambulances}대</li>
-                    <li><strong>과부족</strong>: {current_ambulances - required_ambulances:+d}대</li>
-                </ul>
-            </div>
-            """, unsafe_allow_html=True)
-            
-            # 상태 판정
-            diff = current_ambulances - required_ambulances
-            if diff >= 0:
-                status_color = "success-box"
-                status_text = "✅ 충분"
-                recommendation = "현재 구급차 수가 적정 수준입니다."
-            else:
-                status_color = "alert-box"
-                status_text = "⚠️ 부족"
-                recommendation = f"{abs(diff)}대의 추가 구급차가 필요합니다."
-            
-            st.markdown(f"""
-            <div class="{status_color}">
-                <h4>{status_text}</h4>
-                <p>{recommendation}</p>
-            </div>
-            """, unsafe_allow_html=True)
-            
-            # 가동률 분석
-            if current_ambulances > 0:
-                actual_utilization = (calls_per_year * cycle_time_hours) / (current_ambulances * 365 * 24) * 100
+        
+        
+        # 지역별 구급차 수요 분석
+        st.markdown("#### 🗺️ 지역별 구급차 수요 분석")
+        
+        st.markdown("""
+        **분석 조건 (테스트용 - 매우 엄격한 기준):**
+        - 평균 사이클 타임: 90분 (1.5시간)
+        - 목표 가동률: 50%
+        - 연간 응급호출 수: 이송환자수 × 2.5 (매우 많은 호출 가정)
+        - 주요 지역 구급차 수: 40% 감소 적용 (테스트용)
+        """)
                 
-                st.markdown(f"""
-                <div class="metric-card">
-                    <h4>📊 가동률 분석</h4>
-                    <ul>
-                        <li><strong>목표 가동률</strong>: {target_utilization}%</li>
-                        <li><strong>실제 가동률</strong>: {actual_utilization:.1f}%</li>
-                        <li><strong>여유율</strong>: {100 - actual_utilization:.1f}%</li>
-                    </ul>
-                </div>
-                """, unsafe_allow_html=True)
+        # 연도별 탭 생성
+        years_analysis = sorted(df['연도'].unique(), reverse=True)
+        analysis_tabs = st.tabs([f"{year}년 분석" for year in years_analysis])
         
-        # 시나리오 분석
-        st.markdown("#### 🎯 시나리오 분석")
+        # 고정값 설정
+        CYCLE_TIME_HOURS = 1.5  # 90분
+        TARGET_UTILIZATION = 0.5  # 50%
         
-        scenarios = pd.DataFrame({
-            '시나리오': ['목표(30%)', '목표(40%)', '목표(50%)', '목표(60%)'],
-            '가동률': [30, 40, 50, 60],
-            '필요대수': [
-                calculate_required_ambulances(calls_per_year, cycle_time_hours, 0.3),
-                calculate_required_ambulances(calls_per_year, cycle_time_hours, 0.4),
-                calculate_required_ambulances(calls_per_year, cycle_time_hours, 0.5),
-                calculate_required_ambulances(calls_per_year, cycle_time_hours, 0.6)
-            ]
-        })
-        
-        fig_scenario = px.bar(scenarios, x='시나리오', y='필요대수',
-                             title='목표 가동률별 필요 구급차 수',
-                             color_discrete_sequence=['#1f77b4'])
-        fig_scenario.update_layout(
-            plot_bgcolor='rgba(0,0,0,0)',
-            paper_bgcolor='rgba(0,0,0,0)'
-        )
-        st.plotly_chart(fig_scenario, use_container_width=True)
+        for i, year in enumerate(years_analysis):
+            with analysis_tabs[i]:
+                year_data = df[df['연도'] == year].copy()
+                
+                # 각 지역별 분석 계산
+                analysis_results = []
+                for _, row in year_data.iterrows():
+                    # 테스트를 위해 매우 엄격한 조건 적용
+                    # 연간 응급호출 수를 대폭 증가시켜 부족 상황 강제 생성
+                    estimated_calls = int(row['이송환자수'] * 2.5)  # 150% 더 많게 설정
+                    
+                    # 필요 구급차 수 계산
+                    required_ambulances = calculate_required_ambulances(
+                        estimated_calls, CYCLE_TIME_HOURS, TARGET_UTILIZATION
+                    )
+                    
+                    # 테스트용: 일부 지역의 현재 구급차 수를 강제로 줄임
+                    current_ambulances = row['구급차수']
+                    if row['지역'] in ['서울', '경기', '부산', '대구', '인천']:
+                        current_ambulances = int(current_ambulances * 0.6)  # 40% 감소
+                    elif row['지역'] in ['광주', '대전', '울산', '강원']:
+                        current_ambulances = int(current_ambulances * 0.7)  # 30% 감소
+                    
+                    shortage = required_ambulances - current_ambulances
+                    
+                    # 상태 판정
+                    if shortage > 0:
+                        status = "부족"
+                        status_color = "#ffebee"  # 연한 빨간색 배경
+                    else:
+                        status = "적절"
+                        status_color = "#ffffff"  # 흰색 배경
+                    
+                    analysis_results.append({
+                        '지역': row['지역'],
+                        '현재 구급차수': current_ambulances,
+                        '추정 호출수': f"{estimated_calls:,}",
+                        '필요 구급차수': required_ambulances,
+                        '과부족': shortage,
+                        '상태': status,
+                        '배경색': status_color
+                    })
+                
+                # 결과를 DataFrame으로 변환
+                analysis_df = pd.DataFrame(analysis_results)
+                
+                # 현재 연도 통계 먼저 계산
+                total_regions = len(analysis_df)
+                shortage_regions = len(analysis_df[analysis_df['상태'] == '부족'])
+                adequate_regions = total_regions - shortage_regions
+                total_shortage = analysis_df[analysis_df['과부족'] > 0]['과부족'].sum()
+                
+                # 전년도 대비 증감 계산
+                current_year = year
+                previous_year = current_year - 1
+                
+                # 전년도 데이터가 있는 경우에만 계산
+                if previous_year in df['연도'].values:
+                    prev_year_data = df[df['연도'] == previous_year].copy()
+                    
+                    # 전년도 분석 결과 계산
+                    prev_analysis_results = []
+                    for _, row in prev_year_data.iterrows():
+                        estimated_calls = int(row['이송환자수'] * 2.5)
+                        required_ambulances = calculate_required_ambulances(
+                            estimated_calls, CYCLE_TIME_HOURS, TARGET_UTILIZATION
+                        )
+                        
+                        current_ambulances = row['구급차수']
+                        if row['지역'] in ['서울', '경기', '부산', '대구', '인천']:
+                            current_ambulances = int(current_ambulances * 0.6)
+                        elif row['지역'] in ['광주', '대전', '울산', '강원']:
+                            current_ambulances = int(current_ambulances * 0.7)
+                        
+                        shortage = required_ambulances - current_ambulances
+                        status = "부족" if shortage > 0 else "적절"
+                        
+                        prev_analysis_results.append({
+                            '지역': row['지역'],
+                            '상태': status,
+                            '과부족': shortage
+                        })
+                    
+                    prev_analysis_df = pd.DataFrame(prev_analysis_results)
+                    
+                    # 전년도 통계
+                    prev_total_regions = len(prev_analysis_df)
+                    prev_shortage_regions = len(prev_analysis_df[prev_analysis_df['상태'] == '부족'])
+                    prev_adequate_regions = prev_total_regions - prev_shortage_regions
+                    prev_total_shortage = prev_analysis_df[prev_analysis_df['과부족'] > 0]['과부족'].sum()
+                    
+                    # 증감 계산
+                    delta_shortage = shortage_regions - prev_shortage_regions
+                    delta_adequate = adequate_regions - prev_adequate_regions
+                    delta_total_shortage = total_shortage - prev_total_shortage
+                else:
+                    # 전년도 데이터가 없는 경우 (2020년)
+                    delta_shortage = None
+                    delta_adequate = None
+                    delta_total_shortage = None
+                
+                # 요약 통계
+                col1, col2, col3, col4 = st.columns(4)
+                
+                with col1:
+                    st.metric("전체 지역수", f"{total_regions}개")
+                with col2:
+                    if delta_shortage is not None:
+                        st.metric("부족 지역", f"{shortage_regions}개", delta=f"{delta_shortage:+d}개")
+                    else:
+                        st.metric("부족 지역", f"{shortage_regions}개", delta="기준년도")
+                with col3:
+                    if delta_adequate is not None:
+                        st.metric("적절 지역", f"{adequate_regions}개", delta=f"{delta_adequate:+d}개")
+                    else:
+                        st.metric("적절 지역", f"{adequate_regions}개", delta="기준년도")
+                with col4:
+                    if delta_total_shortage is not None:
+                        st.metric("총 부족 대수", f"{total_shortage}대", delta=f"{delta_total_shortage:+d}대")
+                    else:
+                        st.metric("총 부족 대수", f"{total_shortage}대", delta="기준년도")
+                
+                # 스타일링된 테이블 표시
+                st.markdown("##### 📊 지역별 분석 결과")
+                
+                # 표시용 DataFrame 준비 (배경색 컬럼 제거)
+                display_df = analysis_df.drop('배경색', axis=1).copy()
+                
+                # 컬럼명 변경
+                display_df = display_df.rename(columns={
+                    '현재 구급차수': '현재 구급차수 (대)',
+                    '필요 구급차수': '필요 구급차수 (대)',
+                    '과부족': '과부족 (대)'
+                })
+                
+                # 과부족 컬럼에 + 기호 추가
+                display_df['과부족 (대)'] = display_df['과부족 (대)'].apply(lambda x: f"+{x}" if x >= 0 else str(x))
+                
+                # 부족 우선으로 정렬 (부족 지역이 위에 오도록)
+                display_df['정렬순서'] = display_df['상태'].map({'부족': 0, '적절': 1})
+                display_df = display_df.sort_values(['정렬순서', '과부족 (대)']).drop('정렬순서', axis=1).reset_index(drop=True)
+                
+                # 통합 테이블 표시 (조건부 스타일링 적용)
+                def highlight_shortage(row):
+                    if row['상태'] == '부족':
+                        return ['background-color: #ffebee'] * len(row)  # 연한 빨간색
+                    else:
+                        return ['background-color: white'] * len(row)   # 흰색
+                
+                # 스타일 적용된 데이터프레임 표시 (스크롤 없이 전체 표시)
+                styled_df = display_df.style.apply(highlight_shortage, axis=1)
+                
+                # 높이를 충분히 설정하여 모든 행이 표시되도록 함
+                table_height = len(display_df) * 35 + 50  # 행당 35px + 헤더 50px
+                
+                st.dataframe(
+                    styled_df,
+                    use_container_width=True,
+                    hide_index=True,
+                    height=table_height,
+                    column_config={
+                        "상태": st.column_config.TextColumn(
+                            "상태",
+                            help="🔴 부족: 빨간색 배경, ✅ 적절: 흰색 배경"
+                        ),
+                        "과부족 (대)": st.column_config.TextColumn(
+                            "과부족 (대)",
+                            help="음수는 부족, 양수는 여유"
+                        )
+                    }
+                )
+                
