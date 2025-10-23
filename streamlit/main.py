@@ -8,12 +8,15 @@ from plotly.subplots import make_subplots
 import numpy as np
 from datetime import datetime
 
-# === 0) 모듈 경로 보정: 프로젝트 루트를 sys.path에 추가 ===
-# 현재 파일: .../SKN21-1st-4Team/streamlit/main.py
+# === 0) 모듈 경로 보정 ===
+import os, sys
 _THIS_DIR = os.path.dirname(os.path.abspath(__file__))
 _PROJECT_ROOT = os.path.abspath(os.path.join(_THIS_DIR, ".."))
+_CRAWLING_PATH = os.path.join(_PROJECT_ROOT, "crawling")
 if _PROJECT_ROOT not in sys.path:
     sys.path.insert(0, _PROJECT_ROOT)
+if _CRAWLING_PATH not in sys.path:
+    sys.path.insert(0, _CRAWLING_PATH)
 
 # === 1) Page config는 스트림릿 명령어 중 가장 먼저 호출 ===
 st.set_page_config(
@@ -195,3 +198,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+# 커밋 실험용3

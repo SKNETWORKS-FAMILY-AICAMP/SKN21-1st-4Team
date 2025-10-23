@@ -16,22 +16,11 @@ DB_CONFIG = {
     "autocommit": False,   # 커밋은 수동으로
 }
 
-# ===== UPSERT 및 테이블 생성 =====
-CREATE_TABLE_SQL = """
-CREATE TABLE IF NOT EXISTS emergency_faq (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    faq_question VARCHAR(255) NOT NULL UNIQUE,
-    faq_answer TEXT NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-);
-"""
-
+# ===== UPSERT만 사용 (CREATE TABLE 제거) =====
 UPSERT_SQL = """
 INSERT INTO emergency_faq (faq_question, faq_answer)
 VALUES (%s, %s)
-ON DUPLICATE KEY UPDATE 
-    faq_answer = VALUES(faq_answer);
+ON DUPLICATE KEY UPDATE faq_answer = VALUES(faq_answer);
 """
 
 # ===== 질문 & 링크 =====
@@ -75,7 +64,7 @@ def _table_to_markdown(tbl: Tag) -> str:
         headers = [clean(x.get_text(" ", strip=True)) for x in thead.find_all(["th","td"])]
     for tr in tbl.find_all("tr"):
         cells = [clean(x.get_text(" ", strip=True)) for x in tr.find_all(["th","td"])]
-        if not cells: 
+        if not cells:
             continue
         if not headers:
             headers = cells
@@ -115,7 +104,7 @@ def node_to_markdown(node: Tag) -> str:
 #                   ★★★ 질문 1 · 5 전용 '구간 크롤링' ★★★
 # =====================================================================
 
-# 1) 생활법령(질문 1): 지정한 div ID 5개 구간만 수집
+# 1) 생활법령(질문 1): 지정한 div ID 5개 구간 + 요금표 포함
 def parse_q1_easylaw_segment(url: str) -> str:
     soup = get_soup(url)
     ids_in_order = [
@@ -130,6 +119,19 @@ def parse_q1_easylaw_segment(url: str) -> str:
         el = soup.find(id=idv)
         if el:
             pieces.append(node_to_markdown(el))
+
+    # ★ 요금표(table) 자동 탐지 후 추가
+    # '기본요금', '추가요금', '일반구급차' 등의 키워드가 들어간 표를 우선 선택
+    fee_table_md = ""
+    for tbl in soup.find_all("table"):
+        t = clean(tbl.get_text(" ", strip=True))
+        if any(k in t for k in ["기본요금", "추가요금", "일반구급차", "특수구급차", "합증요금", "이송거리"]):
+            fee_table_md = _table_to_markdown(tbl)
+            if fee_table_md:
+                break
+    if fee_table_md:
+        pieces.append("#### 이송처치료 요금표\n\n" + fee_table_md)
+
     if not any(pieces):
         container = soup.select_one("#conBody, .conBody, #content, .contents, article") or soup
         txt = clean(container.get_text(" ", strip=True))
@@ -137,7 +139,7 @@ def parse_q1_easylaw_segment(url: str) -> str:
     body = "\n\n".join([p for p in pieces if p])
     return f"{body}\n\n[출처] {url}"
 
-# 5) 정책브리핑(질문 5): 시작 p ~ (중간 table 포함) ~ 끝 p 범위 수집
+# 5) 정책브리핑(질문 5): 시작 p ~ 끝 p 사이 "문단만" 수집 (이미지/캡션 테이블 제거)
 def parse_q5_koreakr_segment(url: str) -> str:
     soup = get_soup(url)
     root = soup.select_one("div.view_con, div.article_area, #contents, #content, article") or soup
@@ -158,28 +160,23 @@ def parse_q5_koreakr_segment(url: str) -> str:
         cur = start_node
         while cur:
             if isinstance(cur, Tag):
-                md = node_to_markdown(cur)  # p/table/img/캡션 모두 처리
-                if md:
-                    collected.append(md)
+                # ★ 문단/텍스트만 수집: table, img, captions 무시
+                if cur.name in ("p", "div", "ul", "ol", "span", "strong"):
+                    md = node_to_markdown(cur)
+                    if md:
+                        collected.append(md)
             if cur == end_node:
                 break
             cur = cur.find_next_sibling()
             if cur is None:
                 break
 
-    # 보완 수집(이미지/캡션/끝문단)
+    # 보완: 그래도 비었으면 시작/끝 문단만이라도 수집 (테이블/이미지 제외)
     if not collected:
         p1 = root.find("p", string=lambda s: s and start_text in s)
         if p1:
             collected.append(node_to_markdown(p1))
-        tbl = root.find("table")
-        if tbl:
-            img = tbl.find("img")
-            if img:
-                collected.append(node_to_markdown(img))
-            cap = tbl.find(class_="captions")
-            if cap:
-                collected.append(node_to_markdown(cap))
+        # (요청) 이미지/캡션 테이블은 추가하지 않음
         p2 = root.find("p", string=lambda s: s and end_text in s)
         if p2:
             collected.append(node_to_markdown(p2))
@@ -280,49 +277,32 @@ def load_faq_from_db():
 # ===== 크롤링 & 저장 =====
 def crawl_and_update():
     st.info("📌 크롤링 중입니다. 잠시만 기다려주세요...")
-    
-    # 크롤링 실행
     results = []
-    for i, item in enumerate(QUESTION_SOURCES):
+    for item in QUESTION_SOURCES:
         q, url = item["q"], item["url"]
         try:
-            st.write(f"📍 진행 중: {i+1}/{len(QUESTION_SOURCES)} - {q}")
             a = extract_answer(q, url)
-            if a and len(a.strip()) > 10:  # 최소 10자 이상의 답변만 저장
-                results.append((q, a))
-                st.success(f"✅ {q} (완료 - {len(a)}자)")
-            else:
-                st.warning(f"⚠️ {q} (답변이 너무 짧음)")
-            time.sleep(1)  # 서버 부하 방지
+            results.append((q, a))
+            st.success(f"✅ {q} (완료)")
+            time.sleep(0.2)
         except Exception as e:
             st.error(f"❌ {q} 실패: {e}")
-            continue
 
     if not results:
         st.error("⛔ 크롤링 실패 — 결과 없음")
         return False
 
-    # DB 저장
     conn = _conn()
     try:
         with conn.cursor() as cur:
             for q, a in results:
                 cur.execute(UPSERT_SQL, (q, a))
-                st.write(f"💾 저장: {q}")
         conn.commit()
         st.success(f"✅ 총 {len(results)}건 DB 저장/갱신 완료")
-        
-        # 저장 확인
-        with conn.cursor() as cur:
-            cur.execute("SELECT COUNT(*) FROM emergency_faq")
-            total_count = cur.fetchone()[0]
-            st.info(f"📊 현재 DB에 총 {total_count}개의 FAQ가 저장되어 있습니다.")
-        
         return True
     except Exception as e:
         conn.rollback()
-        st.error(f"⛔ DB 저장 오류: {e}")
-        st.error(f"상세 오류: {str(e)}")
+        st.error(f"⛔ DB 오류: {e}")
         return False
     finally:
         conn.close()
@@ -368,3 +348,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+# 커밋 실험용3
