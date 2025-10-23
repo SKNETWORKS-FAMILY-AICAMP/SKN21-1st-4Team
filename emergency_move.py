@@ -2,16 +2,16 @@ import pandas as pd
 import pymysql
 
 
-# host="127.0.0.1",
-# user="root",
-# password="0000",
-# database="emergency"
-
-
-host="192.168.0.23"
-user="first_guest"
-password="1234"
+host="127.0.0.1",
+user="root",
+password="0000",
 database="emergency"
+
+
+# host="192.168.0.23"
+# user="first_guest"
+# password="1234"
+# database="emergency"
 
 files = [
     "data/2019_move.csv",
