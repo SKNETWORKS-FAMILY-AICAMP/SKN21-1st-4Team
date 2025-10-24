@@ -46,6 +46,58 @@ COLUMN_MAP_2022 = {
 SOURCE_COLS = list(COLUMN_MAP.keys())
 TARGET_COLS = list(COLUMN_MAP.values())   # 변환 후 MySQL 테이블에 들어가는 컬럼
 
+# ---------- 지역명 변환 함수 ----------
+def convert_region_name(region_name):
+    """지역명을 풀네임에서 2글자로 변환"""
+    if pd.isna(region_name) or region_name == '' or region_name == 'nan':
+        return region_name
+    
+    region_name = str(region_name).strip()
+    
+    # 지역명 변환 딕셔너리
+    region_mapping = {
+        # 서울특별시 -> 서울
+        '서울특별시': '서울',
+        
+        # 광역시들
+        '부산광역시': '부산',
+        '대구광역시': '대구', 
+        '인천광역시': '인천',
+        '광주광역시': '광주',
+        '대전광역시': '대전',
+        '울산광역시': '울산',
+        
+        # 세종특별자치시 -> 세종
+        '세종특별자치시': '세종',
+        
+        # 도들
+        '경기도': '경기',
+        '강원도': '강원',
+        '충청북도': '충북',
+        '충청남도': '충남',
+        '전라북도': '전북',
+        '전라남도': '전남',
+        '경상북도': '경북',
+        '경상남도': '경남',
+        '제주특별자치도': '제주',
+        '제주도': '제주'
+    }
+    
+    # 정확히 일치하는 경우
+    if region_name in region_mapping:
+        return region_mapping[region_name]
+    
+    # 부분 매칭 (포함되는 경우)
+    for full_name, short_name in region_mapping.items():
+        if full_name in region_name:
+            return short_name
+    
+    # 매칭되지 않는 경우 첫 2글자 반환 (예: '충청북도청주시' -> '충청')
+    if len(region_name) >= 2:
+        return region_name[:2]
+    
+    return region_name
+
 # ---------- 함수들 ----------
 def get_engine():
     url = (
@@ -120,6 +172,11 @@ def load_file(path: str) -> pd.DataFrame:
 
     # 빈 문자열을 NaN으로 치환 ("" -> <NA>)
     result_df = result_df.replace({"": pd.NA})
+
+    # 지역명 변환 (풀네임 -> 2글자)
+    if 'local' in result_df.columns:
+        result_df['local'] = result_df['local'].apply(convert_region_name)
+        print(f"'{filename}'에서 지역명을 2글자로 변환했습니다.")
 
     # year 숫자 변환 (실패 시 NaN으로)
     result_df["year"] = pd.to_numeric(result_df["year"], errors="coerce").astype("Int64")
