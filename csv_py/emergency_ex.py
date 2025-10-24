@@ -8,6 +8,9 @@ import sys
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 from db_config import DB_CONFIG
 
+# 프로젝트 루트 경로 설정
+loc = os.path.dirname(os.path.dirname(__file__)) + "/"
+
 # ---------- 사용자 설정 ----------
 MYSQL_USER = DB_CONFIG['user']
 MYSQL_PASSWORD = DB_CONFIG['password']
@@ -17,7 +20,7 @@ MYSQL_DATABASE = DB_CONFIG['db']
 TABLE_NAME = "emergency_ex"
 
 # 파일 패턴 (예: "DATA/2019_ex.xlsx", "DATA/2020_ex.xlsx", ...)
-FILE_GLOB = "DATA/*_ex.xlsx"  # DATA 폴더의 ex 파일들
+FILE_GLOB = loc + "DATA/*_ex.xlsx"  # 프로젝트 루트의 DATA 폴더의 ex 파일들
 
 # 실제 원본(엑셀/CSV) 컬럼명 -> MySQL 테이블 컬럼명 매핑
 #   PTN_SYM_SE_NM - 증상  -> cause
