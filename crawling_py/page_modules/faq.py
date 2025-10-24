@@ -41,6 +41,14 @@ def clean(text: str) -> str:
     text = re.sub(r"\s+", " ", text)
     return text.strip()
 
+def truncate_text(text: str, max_length: int) -> str:
+    """텍스트를 지정된 길이로 자르기"""
+    if not text:
+        return ""
+    if len(text) <= max_length:
+        return text
+    return text[:max_length-3] + "..."
+
 def safe_rerun():
     if hasattr(st, "rerun"):
         st.rerun()
