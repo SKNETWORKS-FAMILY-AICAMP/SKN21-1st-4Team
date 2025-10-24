@@ -190,11 +190,7 @@ def main():
                 st.error("페이지를 로드하는 중 오류가 발생했습니다: name 'show_faq_page' is not defined")
 
     except Exception as e:
-        st.error(f"페이지를 로드하는 중 오류가 발생했습니다: {e}")
-        st.write("사용 가능한 페이지:")
-        st.write("- 🏥 응급의료시스템 개요")
-        st.write("- 📊 데이터 및 수요 분석")
-        st.write("- ❓ 자주 묻는 질문")
+        st.error(f"페이지를 표시하는 중 오류가 발생했습니다: {e}")
 
 if __name__ == "__main__":
     main()
