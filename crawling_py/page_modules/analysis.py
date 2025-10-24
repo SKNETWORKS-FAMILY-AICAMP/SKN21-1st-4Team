@@ -70,27 +70,32 @@ def show_analysis_page():
             # 추가 분석: 구급차 1대당 이송환자수
             st.markdown("#### 📈 구급차 효율성 분석")
             
-            # 구급차수 기준으로 정렬 및 효율성 계산
-            sorted_df = filtered_df.sort_values('구급차수', ascending=True)
-            sorted_df['구급차당_이송환자수'] = sorted_df['이송환자수'] / sorted_df['구급차수']
-            sorted_df = sorted_df.sort_values('구급차당_이송환자수', ascending=False)
+            # 구급차수가 0이 아닌 지역만 필터링
+            valid_df = filtered_df[(filtered_df['구급차수'] > 0) & (filtered_df['이송환자수'] > 0)].copy()
             
-            efficiency_fig = px.bar(
-                sorted_df, 
-                x='지역', 
-                y='구급차당_이송환자수',
-                title='구급차 1대당 이송환자수 (효율성 지표)',
-                color='구급차당_이송환자수',
-                color_continuous_scale='Viridis'
-            )
-            efficiency_fig.update_layout(
-                plot_bgcolor='rgba(0,0,0,0)',
-                paper_bgcolor='rgba(0,0,0,0)',
-                height=400,
-                xaxis_tickangle=-45,
-                yaxis_title="구급차 1대당 이송환자수 (명/대)"
-            )
-            st.plotly_chart(efficiency_fig, use_container_width=True)
+            if not valid_df.empty:
+                # 구급차수 기준으로 정렬 및 효율성 계산
+                valid_df['구급차당_이송환자수'] = valid_df['이송환자수'] / valid_df['구급차수']
+                sorted_df = valid_df.sort_values('구급차당_이송환자수', ascending=False)
+                
+                efficiency_fig = px.bar(
+                    sorted_df, 
+                    x='지역', 
+                    y='구급차당_이송환자수',
+                    title='구급차 1대당 이송환자수 (효율성 지표)',
+                    color='구급차당_이송환자수',
+                    color_continuous_scale='Viridis'
+                )
+                efficiency_fig.update_layout(
+                    plot_bgcolor='rgba(0,0,0,0)',
+                    paper_bgcolor='rgba(0,0,0,0)',
+                    height=400,
+                    xaxis_tickangle=-45,
+                    yaxis_title="구급차 1대당 이송환자수 (명/대)"
+                )
+                st.plotly_chart(efficiency_fig, use_container_width=True)
+            else:
+                st.warning("효율성 분석을 위한 유효한 데이터가 없습니다.")
         
         # 연도별 탭으로 데이터 표시
         st.markdown("#### 📋 연도별 상세 데이터")

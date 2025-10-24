@@ -4,8 +4,8 @@ import pandas as pd
 from sqlalchemy import create_engine, text
 import sys
 
-# sql 폴더의 db_config 모듈을 import하기 위해 경로 추가
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'sql'))
+# 홈디렉토리의 db_config 모듈을 import하기 위해 경로 추가
+sys.path.append(os.path.expanduser('~'))
 from db_config import DB_CONFIG
 
 # ---------- 사용자 설정 ----------
