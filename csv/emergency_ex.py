@@ -138,8 +138,8 @@ def load_file(path: str) -> pd.DataFrame:
     return result_df
 
 def main():
-    engine = get_engine()
-    ensure_table(engine)
+    engine = get_engine() # db 연결 엔진 생성
+    ensure_table(engine) # 테이블 존재 확인/생성
 
     files = sorted(glob.glob(FILE_GLOB))
     if not files:

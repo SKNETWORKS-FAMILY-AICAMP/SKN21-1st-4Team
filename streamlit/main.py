@@ -152,7 +152,7 @@ def main():
     for msg in _pending_errors:
         st.warning(msg)
 
-    st.sidebar.title("📊 분석 메뉴")
+    st.sidebar.title("📊 PT 순서")
 
     # 세션 상태 초기화
     if "current_page" not in st.session_state:
@@ -198,4 +198,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-# 커밋 실험용3
