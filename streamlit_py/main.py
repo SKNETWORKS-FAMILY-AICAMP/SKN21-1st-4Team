@@ -7,7 +7,7 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import numpy as np
 from datetime import datetime
-import run
+# run 모듈은 제거 - 별도로 실행
 
 # === 0) 모듈 경로 보정 ===
 import os, sys
@@ -149,9 +149,8 @@ st.markdown("""
 
 # === 5) 메인 앱 ===
 def main():
+    # 데이터베이스 설정은 streamlit 실행 전에 별도로 처리됩니다.
     
-    run.run()
-
     # (로딩 중 쌓인 에러 메시지 출력)
     for msg in _pending_errors:
         st.warning(msg)
