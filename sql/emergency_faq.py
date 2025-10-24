@@ -11,8 +11,8 @@ def emergency_faq_table():
         create_sql = """
         CREATE TABLE emergency_faq (
             idx INT AUTO_INCREMENT PRIMARY KEY,
-            faq_question VARCHAR(255) NOT NULL,
-            faq_answer VARCHAR(255) NOT NULL
+            faq_question TEXT NOT NULL,
+            faq_answer TEXT NOT NULL
         );
         """
 

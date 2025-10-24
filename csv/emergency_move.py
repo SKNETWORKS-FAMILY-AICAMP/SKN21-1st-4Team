@@ -21,7 +21,14 @@ with get_connection() as connection:
 
         for f in files:
             df = pd.read_csv(f)
-
+            
+            # 컬럼명 확인 및 공백 제거
+            print(f"파일: {f}")
+            print(f"원본 컬럼명: {df.columns.tolist()}")
+            
+            # 컬럼명의 공백 제거
+            df.columns = df.columns.str.strip()
+            print(f"공백 제거 후 컬럼명: {df.columns.tolist()}")
             
             df = df[["move_local", "move_count"]]
             

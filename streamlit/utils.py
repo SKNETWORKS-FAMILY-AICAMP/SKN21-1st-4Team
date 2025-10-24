@@ -24,6 +24,7 @@ def load_emergency_car_data():
     try:
         connection = get_mysql_connection()
         if connection is None:
+            st.warning("데이터베이스 연결에 실패했습니다.")
             return pd.DataFrame()
         
         query = """
@@ -34,6 +35,10 @@ def load_emergency_car_data():
         df = pd.read_sql(query, connection)
         connection.close()
         
+        if df.empty:
+            st.warning("emergency_car 테이블에 데이터가 없습니다.")
+            return pd.DataFrame()
+        
         # 연도를 정수형으로 변환
         df['연도'] = df['year'].astype(int)
         df = df.drop('year', axis=1)
@@ -42,6 +47,7 @@ def load_emergency_car_data():
         
     except Exception as e:
         st.error(f"구급차 데이터 로드 중 오류가 발생했습니다: {e}")
+        st.error(f"오류 세부사항: {str(e)}")
         return pd.DataFrame()
 
 @st.cache_data(ttl=3600)  # 1시간 캐시

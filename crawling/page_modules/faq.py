@@ -299,7 +299,10 @@ def crawl_and_update():
     try:
         with conn.cursor() as cur:
             for q, a in results:
-                cur.execute(UPSERT_SQL, (q, a))
+                # 텍스트 길이 제한 (TEXT 타입이라도 너무 긴 텍스트는 자르기)
+                q_truncated = truncate_text(q, 1000)  # 질문은 1000자로 제한
+                a_truncated = truncate_text(a, 60000)  # 답변은 60000자로 제한
+                cur.execute(UPSERT_SQL, (q_truncated, a_truncated))
         conn.commit()
         st.success(f"✅ 총 {len(results)}건 DB 저장/갱신 완료")
         return True
