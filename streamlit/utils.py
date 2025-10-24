@@ -123,31 +123,50 @@ def get_regional_data(region):
 @st.cache_data
 def create_sample_data():
     """통합 데이터 생성 - 구급차 데이터와 후송 데이터를 병합"""
-    car_data = load_emergency_car_data()
-    move_data = load_emergency_move_data()
-    
-    if car_data.empty and move_data.empty:
-        return pd.DataFrame()
-    
-    # 구급차 데이터가 비어있으면 후송 데이터만 반환
-    if car_data.empty:
-        return move_data
-    
-    # 후송 데이터가 비어있으면 구급차 데이터만 반환  
-    if move_data.empty:
-        return car_data
-    
-    # 두 데이터를 병합 (연도와 지역을 기준으로)
     try:
-        merged_data = pd.merge(
-            car_data, 
-            move_data, 
-            on=['연도', '지역'], 
-            how='outer'
-        )
+        car_data = load_emergency_car_data()
+        move_data = load_emergency_move_data()
         
-        # NaN 값을 0으로 채우기
-        merged_data = merged_data.fillna(0)
+        # 두 데이터 모두 비어있으면 기본 구조 반환
+        if car_data.empty and move_data.empty:
+            return pd.DataFrame(columns=['연도', '지역', '구급차수', '이송환자수'])
+        
+        # 구급차 데이터가 비어있으면 후송 데이터만 반환
+        if car_data.empty and not move_data.empty:
+            move_data['구급차수'] = 0
+            return move_data[['연도', '지역', '구급차수', '이송환자수']]
+        
+        # 후송 데이터가 비어있으면 구급차 데이터만 반환  
+        if move_data.empty and not car_data.empty:
+            car_data['이송환자수'] = 0
+            return car_data[['연도', '지역', '구급차수', '이송환자수']]
+        
+        # 두 데이터 모두 있으면 병합
+        if not car_data.empty and not move_data.empty:
+            merged_data = pd.merge(
+                car_data, 
+                move_data, 
+                on=['연도', '지역'], 
+                how='outer'
+            )
+            
+            # NaN 값을 0으로 채우기
+            merged_data = merged_data.fillna(0)
+            
+            # 숫자형 컬럼의 데이터 타입 정리
+            numeric_cols = ['구급차수', '이송환자수']
+            for col in numeric_cols:
+                if col in merged_data.columns:
+                    merged_data[col] = pd.to_numeric(merged_data[col], errors='coerce').fillna(0).astype(int)
+            
+            return merged_data
+        
+        # 기본 빈 DataFrame 반환
+        return pd.DataFrame(columns=['연도', '지역', '구급차수', '이송환자수'])
+        
+    except Exception as e:
+        st.error(f"데이터 생성 중 오류: {e}")
+        return pd.DataFrame(columns=['연도', '지역', '구급차수', '이송환자수'])
         
         # 숫자형 컬럼의 데이터 타입 정리
         numeric_cols = ['구급차수', '이송환자수']

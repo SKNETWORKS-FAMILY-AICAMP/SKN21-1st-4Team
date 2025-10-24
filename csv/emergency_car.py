@@ -25,6 +25,13 @@ with get_connection() as connection:
             df = df.rename(columns={"분류": "car_local", "계": "car_count", "계.1" : "emp_count"})
             df = df[["car_count", "emp_count", "car_local"]]
             
+            # 지역이 '전체'인 경우 제외
+            before_count = len(df)
+            df = df[df['car_local'] != '전체']
+            after_count = len(df)
+            removed_count = before_count - after_count
+            if removed_count > 0:
+                print(f"{f}에서 지역이 '전체'인 {removed_count}개 행을 제외했습니다.")
 
             df["year"] = int(f[5:9])  # "DATA/2019_car.csv"에서 연도 추출 (5:9)
 

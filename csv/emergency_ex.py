@@ -137,6 +137,15 @@ def load_file(path: str) -> pd.DataFrame:
     # ✅ 타겟 컬럼 중 하나라도 비어 있으면 행 제거
     result_df = result_df.dropna(subset=TARGET_COLS, how="any")
 
+    # ✅ 지역이 '전체'인 경우 제외
+    if 'local' in result_df.columns:
+        before_count = len(result_df)
+        result_df = result_df[result_df['local'] != '전체']
+        after_count = len(result_df)
+        removed_count = before_count - after_count
+        if removed_count > 0:
+            print(f"'{filename}'에서 지역이 '전체'인 {removed_count}개 행을 제외했습니다.")
+
     # (선택) NaN -> None (to_sql에서 NULL로 인식되게 하고 싶다면 유지)
     result_df = result_df.where(pd.notnull(result_df), None)
 

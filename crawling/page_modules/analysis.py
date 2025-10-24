@@ -23,13 +23,28 @@ def show_analysis_page():
         # 데이터 로드
         df = create_sample_data()
         
+        # 데이터가 비어있거나 연도 컬럼이 없는 경우 처리
+        if df.empty or '연도' not in df.columns:
+            st.warning("📊 표시할 데이터가 없습니다.")
+            st.info("**해결 방법:**")
+            st.write("1. CSV 파일들을 실행하여 데이터베이스에 데이터를 먼저 로드하세요")
+            st.write("2. 데이터베이스 연결 설정을 확인하세요")
+            st.write("3. emergency_car, emergency_move 테이블이 존재하는지 확인하세요")
+            return
+        
+        # 사용 가능한 연도 확인
+        available_years = sorted(df['연도'].unique(), reverse=True)
+        if len(available_years) == 0:
+            st.warning("사용 가능한 연도 데이터가 없습니다.")
+            return
+        
         # 필터링 옵션
         col1, col2 = st.columns([1, 1])
         
         with col1:
             selected_year = st.selectbox(
                 "분석 연도 선택:",
-                options=sorted(df['연도'].unique(), reverse=True),
+                options=available_years,
                 index=0,  # 최신 연도가 기본값
                 key="year_select"
             )
