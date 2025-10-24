@@ -2,17 +2,17 @@ import pandas as pd
 import numpy as np
 import streamlit as st
 import pymysql
+import sys
+import os
+
+# sql 폴더의 db_config 모듈을 import하기 위해 경로 추가
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'sql'))
+from db_config import get_connection
 
 def get_mysql_connection():
     """MySQL 데이터베이스 연결"""
     try:
-        connection = pymysql.connect(
-            host="192.168.0.25",
-            database="emergency", 
-            user="root",
-            password="1234",
-            port=3306
-        )
+        connection = get_connection()
         return connection
     except Exception as e:
         st.error(f"MySQL 연결 오류: {e}")

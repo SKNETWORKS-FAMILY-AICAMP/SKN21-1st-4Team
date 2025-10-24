@@ -2,13 +2,18 @@ import os
 import glob
 import pandas as pd
 from sqlalchemy import create_engine, text
+import sys
+
+# sql 폴더의 db_config 모듈을 import하기 위해 경로 추가
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'sql'))
+from db_config import DB_CONFIG
 
 # ---------- 사용자 설정 ----------
-MYSQL_USER = "first_guest"
-MYSQL_PASSWORD = "1234"
-MYSQL_HOST = "192.168.0.23"          # 예: "127.0.0.1"
-MYSQL_PORT = 3306
-MYSQL_DATABASE = "emergency"
+MYSQL_USER = DB_CONFIG['user']
+MYSQL_PASSWORD = DB_CONFIG['password']
+MYSQL_HOST = DB_CONFIG['host']
+MYSQL_PORT = DB_CONFIG['port']
+MYSQL_DATABASE = DB_CONFIG['db']
 TABLE_NAME = "emergency_ex"
 
 # 파일 패턴 (예: "2019_move.xlsx", "2020_move.xlsx", ...)
