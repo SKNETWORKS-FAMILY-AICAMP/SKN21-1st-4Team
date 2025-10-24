@@ -67,41 +67,41 @@ files = [
     "DATA/2023_move.csv"]
 
 
+def load_move():
+    with get_connection() as connection:
+        with connection.cursor() as cursor:
 
-with get_connection() as connection:
-    with connection.cursor() as cursor:
+            for f in files:
+                df = pd.read_csv(loc+f)
+                
+                # 컬럼명의 공백 제거
+                df.columns = df.columns.str.strip()
+                print(f"{f} 컬럼명: {df.columns.tolist()}")
 
-        for f in files:
-            df = pd.read_csv(loc+f)
+                df = df[["move_local", "move_count"]]
+                
+                # 지역명을 2글자로 변환
+                df['move_local'] = df['move_local'].apply(convert_region_name)
+                print(f"{f}에서 지역명을 2글자로 변환했습니다.")
+                
+                # 지역이 '전체'인 경우 제외
+                before_count = len(df)
+                df = df[df['move_local'] != '전체']
+                after_count = len(df)
+                removed_count = before_count - after_count
+                if removed_count > 0:
+                    print(f"{f}에서 지역이 '전체'인 {removed_count}개 행을 제외했습니다.")
+
+                df["year"] = int(f[5:9])
+
+                cur = connection.cursor()
+
+                sql = 'insert into emergency_move (year, move_local, move_count) values (%s, %s, %s)'
+                for row in df.iterrows():
+                    row_data = row[1]
+                    # print((row_data['year'], row_data['car_count'].replace(',', ''), row_data['emp_count'].replace(',', ''), row_data['car_local']))
+                    cursor.execute(sql, (row_data['year'], (row_data['move_local']), int(row_data['move_count'])))
+
+            connection.commit()
             
-            # 컬럼명의 공백 제거
-            df.columns = df.columns.str.strip()
-            print(f"{f} 컬럼명: {df.columns.tolist()}")
 
-            df = df[["move_local", "move_count"]]
-            
-            # 지역명을 2글자로 변환
-            df['move_local'] = df['move_local'].apply(convert_region_name)
-            print(f"{f}에서 지역명을 2글자로 변환했습니다.")
-            
-            # 지역이 '전체'인 경우 제외
-            before_count = len(df)
-            df = df[df['move_local'] != '전체']
-            after_count = len(df)
-            removed_count = before_count - after_count
-            if removed_count > 0:
-                print(f"{f}에서 지역이 '전체'인 {removed_count}개 행을 제외했습니다.")
-
-            df["year"] = int(f[5:9])
-
-            cur = connection.cursor()
-
-            sql = 'insert into emergency_move (year, move_local, move_count) values (%s, %s, %s)'
-            for row in df.iterrows():
-                row_data = row[1]
-                # print((row_data['year'], row_data['car_count'].replace(',', ''), row_data['emp_count'].replace(',', ''), row_data['car_local']))
-                cursor.execute(sql, (row_data['year'], (row_data['move_local']), int(row_data['move_count'])))
-
-        connection.commit()
-        
-print(f"{f}년도 적재 완료")
