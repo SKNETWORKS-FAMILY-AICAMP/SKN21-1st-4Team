@@ -1,5 +1,10 @@
 import pymysql
 import pandas as pd
+import sys
+import os
+
+# 홈디렉토리의 db_config 모듈을 import하기 위해 경로 추가
+sys.path.append(os.path.expanduser('~'))
 from db_config import get_connection
 
 def emergency_faq_table():

@@ -5,8 +5,8 @@ import pymysql
 import sys
 import os
 
-# sql 폴더의 db_config 모듈을 import하기 위해 경로 추가
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'sql'))
+# 홈디렉토리의 db_config 모듈을 import하기 위해 경로 추가
+sys.path.append(os.path.expanduser('~'))
 from db_config import get_connection
 
 def get_mysql_connection():
@@ -18,7 +18,6 @@ def get_mysql_connection():
         st.error(f"MySQL 연결 오류: {e}")
         return None
 
-@st.cache_data(ttl=3600)  # 1시간 캐시
 def load_emergency_car_data():
     """emergency_car 테이블에서 구급차 및 이송환자 데이터 로드"""
     try:
@@ -43,6 +42,9 @@ def load_emergency_car_data():
         df['연도'] = df['year'].astype(int)
         df = df.drop('year', axis=1)
         
+        # '전체' 지역 제외
+        df = df[df['지역'] != '전체']
+        
         return df
         
     except Exception as e:
@@ -50,7 +52,6 @@ def load_emergency_car_data():
         st.error(f"오류 세부사항: {str(e)}")
         return pd.DataFrame()
 
-@st.cache_data(ttl=3600)  # 1시간 캐시
 def load_emergency_move_data():
     """emergency_move 테이블에서 후송 횟수 데이터 로드"""
     try:
@@ -70,13 +71,15 @@ def load_emergency_move_data():
         df['연도'] = df['year'].astype(int)
         df = df.drop('year', axis=1)
         
+        # '전체' 지역 제외
+        df = df[df['지역'] != '전체']
+        
         return df
         
     except Exception as e:
         st.error(f"후송 데이터 로드 중 오류가 발생했습니다: {e}")
         return pd.DataFrame()
 
-@st.cache_data(ttl=3600)  # 1시간 캐시  
 def load_emergency_ex_data():
     """emergency_ex 테이블에서 환자 정보 데이터 로드"""
     try:
@@ -120,7 +123,6 @@ def get_regional_data(region):
     }
 
 # 통합 데이터 생성 함수 (기존 create_sample_data 대체)
-@st.cache_data
 def create_sample_data():
     """통합 데이터 생성 - 구급차 데이터와 후송 데이터를 병합"""
     try:
@@ -153,6 +155,9 @@ def create_sample_data():
             # NaN 값을 0으로 채우기
             merged_data = merged_data.fillna(0)
             
+            # '전체' 지역 제외 (혹시 병합 과정에서 생성되었을 경우)
+            merged_data = merged_data[merged_data['지역'] != '전체']
+            
             # 숫자형 컬럼의 데이터 타입 정리
             numeric_cols = ['구급차수', '이송환자수']
             for col in numeric_cols:
@@ -167,18 +172,6 @@ def create_sample_data():
     except Exception as e:
         st.error(f"데이터 생성 중 오류: {e}")
         return pd.DataFrame(columns=['연도', '지역', '구급차수', '이송환자수'])
-        
-        # 숫자형 컬럼의 데이터 타입 정리
-        numeric_cols = ['구급차수', '이송환자수']
-        for col in numeric_cols:
-            if col in merged_data.columns:
-                merged_data[col] = pd.to_numeric(merged_data[col], errors='coerce').fillna(0).astype(int)
-        
-        return merged_data
-        
-    except Exception as e:
-        st.error(f"데이터 병합 중 오류 발생: {e}")
-        return car_data  # 오류 시 구급차 데이터만 반환
 
 # 필요 구급차 수 계산 함수
 def calculate_required_ambulances(calls_per_year, avg_cycle_time_hours, target_utilization):

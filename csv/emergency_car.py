@@ -3,8 +3,8 @@ import pymysql
 import sys
 import os
 
-# sql 폴더의 db_config 모듈을 import하기 위해 경로 추가
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'sql'))
+# 홈디렉토리의 db_config 모듈을 import하기 위해 경로 추가
+sys.path.append(os.path.expanduser('~'))
 from db_config import get_connection
 
 loc = os.path.dirname(os.path.dirname(__file__))+"/"
