@@ -1,16 +1,11 @@
 import pymysql
 import pandas as pd
+from db_config import get_connection
 
 def emergency_ex_table():
     
     try:
-        conn = pymysql.connect(
-            host='192.168.0.23',
-            user='first_guest',
-            password='1234',
-            db='emergency',
-            port=3306
-        )
+        conn = get_connection()
 
         cursor = conn.cursor()
 
@@ -37,13 +32,7 @@ def emergency_ex_table():
 def ex_all():
       
     try:
-        conn = pymysql.connect(
-            host='192.168.0.23',
-            user='first_guest',
-            password='1234',
-            db='emergency',
-            port=3306
-        )
+        conn = get_connection()
 
         sql_all = """
         SELECT year, local, cause, gender, job
@@ -58,13 +47,7 @@ def ex_all():
 def ex_local(region):
 
     try:
-        conn = pymysql.connect(
-            host='192.168.0.23',
-            user='first_guest',
-            password='1234',
-            db='emergency',
-            port=3306
-        )
+        conn = get_connection()
 
         sql_region = f"""
         SELECT year, local, cause, gender, job

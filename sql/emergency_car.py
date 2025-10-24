@@ -1,15 +1,10 @@
 import pymysql
 import pandas as pd
+from db_config import get_connection
 
 def emergency_car_table():
     try: 
-        conn = pymysql.connect(
-            host='192.168.0.23',
-            user='first_guest',
-            password='1234',
-            db='emergency',
-            port=3306
-        )
+        conn = get_connection()
 
         cursor = conn.cursor()
 
@@ -36,13 +31,7 @@ def emergency_car_table():
 def car_all():
 
     try:
-        conn = pymysql.connect(
-            host='192.168.0.23',
-            user='first_guest',
-            password='1234',
-            db='emergency',
-            port=3306
-        )
+        conn = get_connection()
 
     
     # 전체 데이터 조회
@@ -58,13 +47,7 @@ def car_all():
 
 def car_local(region):
 
-    conn = pymysql.connect(
-            host='192.168.0.23',
-            user='first_guest',
-            password='1234',
-            db='emergency',
-            port=3306
-        )
+    conn = get_connection()
 
     try:
         # 지역별 데이터 조회

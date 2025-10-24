@@ -7,9 +7,9 @@ def get_mysql_connection():
     """MySQL 데이터베이스 연결"""
     try:
         connection = pymysql.connect(
-            host="192.168.0.23",
+            host="192.168.0.25",
             database="emergency", 
-            user="first_guest",
+            user="root",
             password="1234",
             port=3306
         )

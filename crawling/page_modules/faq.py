@@ -4,17 +4,12 @@ import pymysql
 import requests
 from bs4 import BeautifulSoup, NavigableString, Tag
 import html, re, time
+import sys
+import os
 
-# ===== DB 설정 =====
-DB_CONFIG = {
-    "host": "192.168.0.23",
-    "port": 3306,
-    "user": "first_guest",
-    "password": "1234",
-    "db": "emergency",
-    "charset": "utf8mb4",
-    "autocommit": False,   # 커밋은 수동으로
-}
+# sql 폴더의 db_config 모듈을 import하기 위해 경로 추가
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', 'sql'))
+from db_config import DB_CONFIG
 
 # ===== UPSERT만 사용 (CREATE TABLE 제거) =====
 UPSERT_SQL = """
@@ -255,7 +250,15 @@ def extract_answer(q_text: str, url: str) -> str:
 
 # ===== DB I/O =====
 def _conn():
-    return pymysql.connect(**DB_CONFIG)
+    return pymysql.connect(
+        host=DB_CONFIG['host'],
+        port=DB_CONFIG['port'],
+        user=DB_CONFIG['user'],
+        password=DB_CONFIG['password'],
+        db=DB_CONFIG['db'],
+        charset='utf8mb4',
+        autocommit=False
+    )
 
 def load_faq_from_db():
     try:

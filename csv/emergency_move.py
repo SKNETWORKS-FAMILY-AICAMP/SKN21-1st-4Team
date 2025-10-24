@@ -1,17 +1,11 @@
 import pandas as pd
 import pymysql
+import sys
+import os
 
-
-host="192.168.0.23"
-user="first_guest"
-password="1234"
-database="emergency"
-
-
-# host="192.168.0.23"
-# user="first_guest"
-# password="1234"
-# database="emergency"
+# sql 폴더의 db_config 모듈을 import하기 위해 경로 추가
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'sql'))
+from db_config import get_connection
 
 files = [
     "DATA/2019_move.csv",
@@ -22,7 +16,7 @@ files = [
 
 
 
-with pymysql.connect(host=host, user=user, password=password, database=database) as connection:
+with get_connection() as connection:
     with connection.cursor() as cursor:
 
         for f in files:

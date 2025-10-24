@@ -1,16 +1,11 @@
 import pymysql
 import pandas as pd
+from db_config import get_connection
 
 def emergency_faq_table():
 
     try:
-        conn = pymysql.connect(
-            host='192.168.0.23',
-            user='first_guest',
-            password='1234',
-            db='emergency',
-            port=3306
-        )
+        conn = get_connection()
         cursor = conn.cursor()
 
         create_sql = """
@@ -34,13 +29,7 @@ def emergency_faq_table():
 def faq_all():
 
     try:
-        conn = pymysql.connect(
-            host='192.168.0.23',
-            user='first_guest',
-            password='1234',
-            db='emergency',
-            port=3306
-        )
+        conn = get_connection()
 
         sql_all = """
         SELECT idx, faq_question, faq_answer

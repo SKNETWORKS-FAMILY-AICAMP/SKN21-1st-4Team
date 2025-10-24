@@ -1,16 +1,11 @@
 import pymysql
 import pandas as pd
+from db_config import get_connection
 
 def emergency_move_table():
     
     try:
-        conn = pymysql.connect(
-            host='192.168.0.23',
-            user='first_guest',
-            password='1234',
-            db='emergency',
-            port=3306
-        )
+        conn = get_connection()
 
         cursor = conn.cursor()
 
@@ -35,13 +30,7 @@ def emergency_move_table():
 def move_all():
 
     try:
-        conn = pymysql.connect(
-            host='192.168.0.23',
-            user='first_guest',
-            password='1234',
-            db='emergency',
-            port=3306
-        )
+        conn = get_connection()
 
         sql_all = """
         SELECT year, move_local, move_count
@@ -56,13 +45,7 @@ def move_all():
 
 def move_local(region):
     try:
-        conn = pymysql.connect(
-            host='192.168.0.23',
-            user='first_guest',
-            password='1234',
-            db='emergency',
-            port=3306
-        )
+        conn = get_connection()
 
         sql_region = f"""
         SELECT year, move_local, move_count
