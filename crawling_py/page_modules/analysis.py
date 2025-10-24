@@ -7,7 +7,7 @@ import sys
 import os
 
 # utils.py 경로 추가
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', 'streamlit'))
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', 'streamlit_py'))
 from utils import create_sample_data, calculate_required_ambulances, load_emergency_ex_data
 
 def show_analysis_page():

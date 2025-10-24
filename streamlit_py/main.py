@@ -12,7 +12,7 @@ from datetime import datetime
 import os, sys
 _THIS_DIR = os.path.dirname(os.path.abspath(__file__))
 _PROJECT_ROOT = os.path.abspath(os.path.join(_THIS_DIR, ".."))
-_CRAWLING_PATH = os.path.join(_PROJECT_ROOT, "crawling")
+_CRAWLING_PATH = os.path.join(_PROJECT_ROOT, "crawling_py")
 if _PROJECT_ROOT not in sys.path:
     sys.path.insert(0, _PROJECT_ROOT)
 if _CRAWLING_PATH not in sys.path:
@@ -50,7 +50,7 @@ show_analysis_page = None
 show_faq_page = None
 
 try:
-    import crawling.page_modules.overview as _ov
+    import crawling_py.page_modules.overview as _ov
     show_overview_page = _pick_func(_ov, ["show_overview_page", "show_page", "main"])
     if show_overview_page is None:
         _pending_errors.append("overview 모듈에서 호출 가능한 함수(show_overview_page/show_page/main)를 찾지 못했습니다.")
@@ -58,7 +58,7 @@ except Exception as e:
     _pending_errors.append(f"페이지 모듈 로드 오류(overview): {e}")
 
 try:
-    import crawling.page_modules.analysis as _an
+    import crawling_py.page_modules.analysis as _an
     show_analysis_page = _pick_func(_an, ["show_analysis_page", "show_page", "main"])
     if show_analysis_page is None:
         _pending_errors.append("analysis 모듈에서 호출 가능한 함수(show_analysis_page/show_page/main)를 찾지 못했습니다.")
@@ -66,7 +66,7 @@ except Exception as e:
     _pending_errors.append(f"페이지 모듈 로드 오류(analysis): {e}")
 
 try:
-    import crawling.page_modules.faq as _fq
+    import crawling_py.page_modules.faq as _fq
     show_faq_page = _pick_func(_fq, ["show_faq_page", "show_page", "main"])
     if show_faq_page is None:
         _pending_errors.append("faq 모듈에서 호출 가능한 함수(show_faq_page/show_page/main)를 찾지 못했습니다.")

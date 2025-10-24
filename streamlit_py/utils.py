@@ -45,6 +45,9 @@ def load_emergency_car_data():
         # '전체' 지역 제외
         df = df[df['지역'] != '전체']
         
+        # 중복 데이터 제거 (연도, 지역 기준으로)
+        df = df.drop_duplicates(subset=['연도', '지역'], keep='first')
+        
         return df
         
     except Exception as e:
@@ -74,6 +77,9 @@ def load_emergency_move_data():
         # '전체' 지역 제외
         df = df[df['지역'] != '전체']
         
+        # 중복 데이터 제거 (연도, 지역 기준으로)
+        df = df.drop_duplicates(subset=['연도', '지역'], keep='first')
+        
         return df
         
     except Exception as e:
@@ -98,6 +104,9 @@ def load_emergency_ex_data():
         # 연도를 정수형으로 변환
         df['연도'] = df['year'].astype(int)
         df = df.drop('year', axis=1)
+        
+        # 데이터 정리 (필요시 중복 제거)
+        df = df.dropna()  # 빈 값 제거
         
         return df
         
@@ -157,6 +166,9 @@ def create_sample_data():
             
             # '전체' 지역 제외 (혹시 병합 과정에서 생성되었을 경우)
             merged_data = merged_data[merged_data['지역'] != '전체']
+            
+            # 중복 데이터 제거 (연도, 지역 기준으로)
+            merged_data = merged_data.drop_duplicates(subset=['연도', '지역'], keep='first')
             
             # 숫자형 컬럼의 데이터 타입 정리
             numeric_cols = ['구급차수', '이송환자수']
