@@ -1,13 +1,21 @@
-# sql문 사용을 위한 import
-from ..sql_py import emergency_car as sql_car
-from ..sql_py import emergency_ex as sql_ex
-from ..sql_py import emergency_faq as sql_faq
-from ..sql_py import emergerncy_move as sql_move
+import os
+import sys
+import subprocess
 
-# csv data upload를 위한 import
-from ..csv_py import emergency_car as csv_car
-from ..csv_py import emergency_move as csv_move
-from ..csv_py import emergency_ex as csv_ex
+#프로젝트 루트 경로 추가
+project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(project_root)
+
+#sql문 사용을 위한 import
+import sql_py.emergency_car as sql_car
+import sql_py.emergency_ex as sql_ex
+import sql_py.emergency_faq as sql_faq
+import sql_py.emergerncy_move as sql_move 
+
+#csv data upload를 위한 import
+import csv_py.emergency_car as csv_car
+import csv_py.emergency_move as csv_move
+import csv_py.emergency_ex as csv_ex
 
 def run():
     sql_car.emergency_car_table()
