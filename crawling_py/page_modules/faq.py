@@ -8,7 +8,7 @@ import sys
 import os
 
 # 홈디렉토리의 db_config 모듈을 import하기 위해 경로 추가
-sys.path.append(os.path.expanduser('~'))
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
 from db_config import DB_CONFIG
 
 # ===== UPSERT만 사용 (CREATE TABLE 제거) =====

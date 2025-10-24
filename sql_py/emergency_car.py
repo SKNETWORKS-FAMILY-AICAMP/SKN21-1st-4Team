@@ -3,8 +3,8 @@ import pandas as pd
 import sys
 import os
 
-# 홈디렉토리의 db_config 모듈을 import하기 위해 경로 추가
-sys.path.append(os.path.expanduser('~'))
+# 프로젝트 루트의 db_config 모듈을 import하기 위해 경로 추가
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 from db_config import get_connection
 
 def emergency_car_table():
