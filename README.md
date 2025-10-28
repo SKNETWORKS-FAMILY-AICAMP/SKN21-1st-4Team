@@ -23,13 +23,7 @@
 
 ### 프로젝트 동작 순서
 
-RUN.PY 실행
-    |
-DB CLEAR
-    |
-DATA INSERT
-    |
-STREAMLIT VIEW
+RUN.PY 실행 -> DB CLEAR -> DATA INSERT -> STREAMLIT VIEW
 
 ### 트러블슈팅
 기존 활용하려던 csv 파일의 용량이 커서 필요한 Data 만 추출해서 사용,
